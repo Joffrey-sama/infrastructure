@@ -1,0 +1,21 @@
+---
+cluster-domain: {{ k3s_config.cluster_domain }}
+cluster-cidr: {{ k3s_config.cluster_cidr }}
+service-cidr: {{ k3s_config.service_cidr }}
+data-dir: {{ k3s_config.data_dir }}
+flannel-backend: {{ k3s_config.flannel_backend }}
+
+# Disable specified components
+{% for component in k3s_config.disable %}
+disable: {{ component }}
+{% endfor %}
+
+# Node labels
+{% for label in k3s_config.node_labels %}
+node-label:
+  - {{ label }}
+{% endfor %}
+
+# Kubeconfig settings
+write-kubeconfig: {{ k3s_config.write_kubeconfig }}
+write-kubeconfig-mode: {{ k3s_config.write_kubeconfig_mode }}

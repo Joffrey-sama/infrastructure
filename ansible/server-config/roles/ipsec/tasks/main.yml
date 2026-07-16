@@ -1,0 +1,35 @@
+---
+- name: Install VPN tools
+  ansible.builtin.apt:
+    name:
+      - strongswan
+      - strongswan-pki
+    state: present
+
+- name: Enable IP Forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    reload: true
+
+
+- name: Configure Strongswan Secrets
+  ansible.builtin.template:
+    src: ipsec.secrets.j2
+    dest: /etc/ipsec.secrets
+    mode: '0600'
+  notify: VPN Reset
+
+- name: Configure Strongswan (Pure Policy-Based)
+  ansible.builtin.template:
+    src: ipsec.conf.j2
+    dest: /etc/ipsec.conf
+    mode: '0644'
+  notify: VPN Reset
+
+- name: Ensure Strongswan is running
+  ansible.builtin.service:
+    name: strongswan-starter
+    state: started
+    enabled: true

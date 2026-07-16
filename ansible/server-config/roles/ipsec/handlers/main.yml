@@ -1,0 +1,12 @@
+---
+- name: "VPN Reset"
+  become: true
+  ansible.builtin.shell: |
+    systemctl stop strongswan-starter
+    pkill -9 charon || true
+    pkill -9 starter || true
+    rm -f /var/run/charon.pid /var/run/starter.charon.pid
+    ip xfrm state flush
+    ip xfrm policy flush
+    systemctl start strongswan-starter
+  listen: "refresh_vpn"

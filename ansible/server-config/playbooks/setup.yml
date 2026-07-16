@@ -1,0 +1,24 @@
+---
+- name: Setup K3s Cluster
+  hosts: all
+  become: true
+
+  roles:
+    - role: common
+      tags: [common]
+    - role: storage
+      tags: [storage]
+    - role: k3s
+      tags: [k3s]
+
+  post_tasks:
+    - name: Set kernel parameters for containerized workloads
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true # Ensures the value is applied immediately
+      loop:
+        - { key: "vm.max_map_count", value: "262144" } # For Elasticsearch/OpenSearch
+        - { key: "fs.inotify.max_user_watches", value: "524288" } # For media servers like Jellyfin
+        - { key: "fs.inotify.max_user_instances", value: "512" } # For media servers like Jellyfin

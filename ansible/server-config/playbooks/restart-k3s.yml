@@ -1,0 +1,14 @@
+---
+- name: Ensure K3s service is running
+  hosts: wsl
+  become: true
+
+  tasks:
+    - name: Start K3s service and ensure it is enabled
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      
+      notify: Wait for K3s to be ready

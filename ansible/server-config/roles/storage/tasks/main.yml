@@ -1,0 +1,128 @@
+---
+- name: Install storage management tools
+  ansible.builtin.package:
+    name:
+      - parted
+      - xfsprogs
+      - lvm2
+    state: present
+
+- name: Configure disk partitions
+  community.general.parted:
+    device: "{{ item.0.device }}"
+    number: "{{ item.1.number }}"
+    label: "{{ item.0.label_type | default('gpt') }}"
+    name: "{{ item.1.name | default(omit) }}"
+    part_start: "{{ item.1.start | default('0%') }}"
+    part_end: "{{ item.1.end | default('100%') }}"
+    state: present
+    fs_type: "{{ item.1.fs_type | default('ext4') }}"
+    # unit: % is necessary to use start/end percentages
+    unit: "%"
+  loop: "{{ storage_disks | default([], true) | subelements('partitions', skip_missing=True) }}"
+  when: storage_disks is defined
+
+- name: Configure LVM Volume Groups
+  community.general.lvg:
+    vg: "{{ item.name }}"
+    pvs: "{{ item.devices }}"
+    state: present
+    force: true
+  loop: "{{ storage_vgs | default([], true) }}"
+  when: storage_vgs is defined
+
+- name: Prepare partitions (Unmount and Wipe if filesystem mismatch)
+  ansible.builtin.shell:
+    cmd: |
+      dev="{{ item.0.device ~ 'p' ~ item.1.number if 'nvme' in item.0.device else item.0.device ~ item.1.number }}"
+      target_fs="{{ item.1.fs_type | default('ext4') }}"
+
+      # Check current filesystem
+      current_fs=$(lsblk -no FSTYPE "$dev" || echo "")
+
+      # If mismatch (and current is not empty), wipe it
+      if [ -n "$current_fs" ] && [ "$current_fs" != "$target_fs" ]; then
+        # Unmount if mounted anywhere
+        if grep -qs "^$dev " /proc/mounts; then
+          umount "$dev"
+        fi
+        # Wipe signatures
+        wipefs -a "$dev"
+        echo "wiped"
+      fi
+    executable: /bin/bash
+  loop: "{{ storage_disks | default([], true) | subelements('partitions', skip_missing=True) }}"
+  when: storage_disks is defined
+  register: disk_prep
+  changed_when: "'wiped' in disk_prep.stdout"
+
+- name: Create filesystems
+  community.general.filesystem:
+    fstype: "{{ item.1.fs_type | default('ext4') }}"
+    # Handle naming differences: NVMe (p1) vs SATA/SCSI (1)
+    dev: >-
+      {{
+        item.0.device ~ 'p' ~ item.1.number
+        if 'nvme' in item.0.device
+        else item.0.device ~ item.1.number
+      }}
+  loop: "{{ storage_disks | default([], true) | subelements('partitions', skip_missing=True) }}"
+  when: storage_disks is defined
+
+- name: Create mount points
+  ansible.builtin.file:
+    path: "{{ item.1.mount_point }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ storage_disks | default([], true) | subelements('partitions', skip_missing=True) }}"
+  when: storage_disks is defined and item.1.mount_point is defined
+
+- name: Mount partitions
+  ansible.posix.mount:
+    path: "{{ item.1.mount_point }}"
+    src: >-
+      {{
+        item.0.device ~ 'p' ~ item.1.number
+        if 'nvme' in item.0.device
+        else item.0.device ~ item.1.number
+      }}
+    fstype: "{{ item.1.fs_type | default('ext4') }}"
+    opts: "{{ item.1.mount_options | default('defaults') }}"
+    state: mounted
+  loop: "{{ storage_disks | default([], true) | subelements('partitions', skip_missing=True) }}"
+  when: storage_disks is defined and item.1.mount_point is defined
+
+- name: Configure LVM Logical Volumes
+  community.general.lvol:
+    vg: "{{ item.vg }}"
+    lv: "{{ item.lv }}"
+    size: "{{ item.size }}"
+    state: present
+    resizefs: true
+  loop: "{{ storage_lvm }}"
+  when: storage_lvm is defined
+
+- name: Create filesystems for LVM
+  community.general.filesystem:
+    fstype: "{{ item.fs_type | default('ext4') }}"
+    dev: "/dev/{{ item.vg }}/{{ item.lv }}"
+  loop: "{{ storage_lvm }}"
+  when: storage_lvm is defined
+
+- name: Create mount points for LVM
+  ansible.builtin.file:
+    path: "{{ item.mount_point }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ storage_lvm }}"
+  when: storage_lvm is defined
+
+- name: Mount LVM volumes
+  ansible.posix.mount:
+    path: "{{ item.mount_point }}"
+    src: "/dev/{{ item.vg }}/{{ item.lv }}"
+    fstype: "{{ item.fs_type | default('ext4') }}"
+    opts: "{{ item.mount_options | default('defaults') }}"
+    state: mounted
+  loop: "{{ storage_lvm }}"
+  when: storage_lvm is defined

@@ -1,0 +1,56 @@
+config setup
+    charondebug="ike 2, knl 2, cfg 2"
+    uniqueids=no
+
+conn oci-common
+    authby=secret
+    keyexchange=ikev2
+    left=%any
+    leftid={{ public_ip }}
+    right={{ remote_public_ip }}
+    rightid={{ remote_public_ip }}
+    ike=aes256gcm16-prfsha384-ecp384!
+    esp=aes256gcm16-modp1536!
+    dpddelay=30s
+    dpdtimeout=120s
+    dpdaction=restart
+    closeaction=restart
+
+conn nodes-to-oci-nodes
+    also=oci-common
+    leftsubnet={{ nodes_cidr }}
+    rightsubnet={{ remote_nodes_cidr }}
+    auto=start
+
+conn pods-to-oci-nodes
+    also=oci-common
+    leftsubnet={{ pods_cidr }}
+    rightsubnet={{ remote_nodes_cidr }}
+    auto=start
+
+conn istio-to-oci-nodes
+    also=oci-common
+    leftsubnet={{ istio_ip }}/32
+    rightsubnet={{ remote_nodes_cidr }}
+    auto=start
+
+# 1. Allows On-Premise Nodes to talk to OCI Pods (e.g. East-West Gateway)
+conn nodes-to-oci-pods
+    also=oci-common
+    leftsubnet={{ nodes_cidr }}
+    rightsubnet={{ remote_pods_cidr }}
+    auto=start
+
+# 2. Allows On-Premise Pods to talk to OCI Pods (Required for Service Mesh)
+conn pods-to-oci-pods
+    also=oci-common
+    leftsubnet={{ pods_cidr }}
+    rightsubnet={{ remote_pods_cidr }}
+    auto=start
+
+# 3. Allows the On-Premise VIP/Istiod IP to talk to OCI Pods
+conn istio-to-oci-pods
+    also=oci-common
+    leftsubnet={{ istio_ip }}/32
+    rightsubnet={{ remote_pods_cidr }}
+    auto=start

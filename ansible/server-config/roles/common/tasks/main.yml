@@ -1,0 +1,54 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install required system packages
+  ansible.builtin.apt:
+    name: "{{ system_packages }}"
+    state: present
+
+- name: Configure passwordless sudo for ansible_user
+  ansible.builtin.lineinfile:
+    path: "/etc/sudoers.d/90-{{ ansible_user }}" # Use a file name based on the user
+    create: true
+    mode: '0440'
+    owner: root
+    group: root
+    line: "{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL"
+    validate: 'visudo -cf %s' # Validate syntax before writing
+  when: ansible_become_method == 'sudo' # Only apply if using sudo
+
+- name: Enable and manage ufw
+  community.general.ufw:
+    state: enabled
+    policy: allow # Default policy for outgoing traffic
+
+- name: Allow incoming HTTP traffic for Gateway LoadBalancer
+  community.general.ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+    comment: 'Allow Gateway LoadBalancer HTTP'
+
+- name: Allow incoming HTTPS traffic for Gateway LoadBalancer
+  community.general.ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
+    comment: 'Allow Gateway LoadBalancer HTTPS'
+
+- name: Allow incoming DNS traffic (TCP)
+  community.general.ufw:
+    rule: allow
+    port: '53'
+    proto: tcp
+    comment: 'Allow DNS (AdGuard Home)'
+
+- name: Allow incoming DNS traffic (UDP)
+  community.general.ufw:
+    rule: allow
+    port: '53'
+    proto: udp
+    comment: 'Allow DNS (AdGuard Home)'
