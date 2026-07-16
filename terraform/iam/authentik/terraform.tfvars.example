@@ -28,3 +28,8 @@ grafana_client_secret   = "placeholder_for_grafana_client_secret"
 headscale_client_secret = "placeholder_for_headscale_client_secret"
 headlamp_client_secret  = "placeholder_for_headlamp_client_secret"
 homarr_client_secret    = "placeholder_for_homarr_client_secret"
+
+# Optional Branding & Group Names (Defaults: "Portal", "standard-users")
+# brand_name              = "My Portal"
+# default_user_group_name = "standard-users"
+

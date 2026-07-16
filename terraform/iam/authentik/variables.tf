@@ -92,3 +92,15 @@ variable "resource_naming_template" {
   description = "Naming template for created cluster resources"
   type        = string
 }
+
+variable "brand_name" {
+  description = "The brand/portal name used in flows and UI"
+  type        = string
+  default     = "Portal"
+}
+
+variable "default_user_group_name" {
+  description = "Default group name for newly enrolled users"
+  type        = string
+  default     = "standard-users"
+}
