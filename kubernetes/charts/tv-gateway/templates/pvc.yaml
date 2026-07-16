@@ -1,0 +1,13 @@
+{{- range .Values.iptv_instances }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $.Release.Name }}-threadfin-{{ .name }}-config
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: "local-path" # Standard local-path storage class
+  resources:
+    requests:
+      storage: 1Gi
+{{- end }}

@@ -1,0 +1,314 @@
+global:
+  imagePullPolicy: IfNotPresent
+  storageClass: "local-path"
+  timezone: "Europe/Paris"
+  puid: 1000
+  pgid: 1000
+  domain: "example.com"
+
+main:
+  controllers:
+    qbittorrent:
+      enabled: true
+      pod:
+        annotations: {}
+      initContainers:
+        init-cross-seed:
+          image:
+            repository: docker.io/library/busybox
+            tag: latest
+          command:
+            [
+              "sh",
+              "-c",
+              "mkdir -p /qbittorrent/cross-seed/output && cp /tmp/cross-seed/config.js /qbittorrent/cross-seed/config.js",
+            ]
+      containers:
+        main:
+          image:
+            repository: ghcr.io/hotio/qbittorrent
+            tag: release
+          resources:
+            requests: { cpu: "200m", memory: "512Mi" }
+            limits: { cpu: "2", memory: "2Gi" }
+          probes:
+            liveness:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 8080
+            readiness:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 8080
+            startup:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 8080
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+        gluetun:
+          enabled: false
+          image:
+            repository: qmcgaw/gluetun
+            tag: latest
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          env: []
+        cross-seed:
+          enabled: false
+          image:
+            repository: ghcr.io/cross-seed/cross-seed
+            tag: 6.13.7
+          args: ["daemon"]
+          env:
+            - name: CONFIG_DIR
+              value: "/qbittorrent/cross-seed"
+            - name: CROSSSEED_PORT
+              value: "2468"
+            - name: PROWLARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: servarr-api-key
+                  key: api-key
+          resources:
+            requests: { cpu: "10m", memory: "50Mi" }
+            limits: { cpu: "100m", memory: "200Mi" }
+          probes:
+            liveness:
+              enabled: true
+              type: HTTP
+              path: /api/ping
+              port: 2468
+            readiness:
+              enabled: true
+              type: HTTP
+              path: /api/ping
+              port: 2468
+            startup:
+              enabled: true
+              type: HTTP
+              path: /api/ping
+              port: 2468
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+
+    sabnzbd:
+      enabled: true
+      pod:
+        annotations: {}
+      initContainers:
+        init-config:
+          image:
+            repository: docker.io/library/busybox
+            tag: latest
+          command:
+            ["sh", "-c", "cp /tmp/sabnzbd-ini/sabnzbd.ini /config/sabnzbd.ini"]
+      containers:
+        main:
+          image:
+            repository: ghcr.io/hotio/sabnzbd
+            tag: release
+          env:
+            - name: SABNZBD__HOST_WHITELIST
+              value: "usenet.internal.example.com"
+          resources:
+            requests: { cpu: "200m", memory: "512Mi" }
+            limits: { cpu: "2", memory: "2Gi" }
+          probes:
+            liveness:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 8080
+            readiness:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 8080
+            startup:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 8080
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+
+  service:
+    qbittorrent:
+      controller: qbittorrent
+      ports:
+        http:
+          port: 8080
+        cross-seed:
+          port: 2468
+    sabnzbd:
+      controller: sabnzbd
+      ports:
+        http:
+          port: 8080
+
+  route:
+    qbittorrent:
+      enabled: false
+      # parentRefs:
+      #   - name: my-gateway
+      #     namespace: gateway-system
+      # hostnames:
+      #   - torrent.internal.example.com
+    sabnzbd:
+      enabled: false
+      # parentRefs:
+      #   - name: my-gateway
+      #     namespace: gateway-system
+      # hostnames:
+      #   - usenet.internal.example.com
+
+  persistence:
+    qbittorrent-config:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: "local-path"
+      size: 1Gi
+      accessMode: ReadWriteOnce
+      advancedMounts:
+        qbittorrent:
+          main:
+            - path: /config
+          cross-seed:
+            - path: /qbittorrent
+          init-cross-seed:
+            - path: /qbittorrent
+    # qbittorrent-media:
+    #   enabled: false
+    #   type: persistentVolumeClaim
+    #   existingClaim: "shared-media"
+    #   advancedMounts:
+    #     qbittorrent:
+    #       main:
+    #         - path: /media
+    #       cross-seed:
+    #         - path: /media
+    cross-seed-config:
+      enabled: true
+      type: configMap
+      identifier: cross-seed-config
+      advancedMounts:
+        qbittorrent:
+          cross-seed:
+            - path: /tmp/cross-seed
+          init-cross-seed:
+            - path: /tmp/cross-seed
+
+    sabnzbd-config:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: "local-path"
+      size: 1Gi
+      accessMode: ReadWriteOnce
+      advancedMounts:
+        sabnzbd:
+          main:
+            - path: /config
+          init-config:
+            - path: /config
+    # sabnzbd-media:
+    #   enabled: false
+    #   type: persistentVolumeClaim
+    #   existingClaim: "shared-media"
+    #   advancedMounts:
+    #     sabnzbd:
+    #       main:
+    #         - path: /media
+    sabnzbd-ini:
+      enabled: true
+      type: configMap
+      identifier: sabnzbd-ini
+      advancedMounts:
+        sabnzbd:
+          main:
+            - path: /tmp/sabnzbd-ini
+          init-config:
+            - path: /tmp/sabnzbd-ini
+
+  configMaps:
+    sabnzbd-ini:
+      data:
+        sabnzbd.ini: |
+          [misc]
+          host_whitelist = usenet.internal.example.com, servarr-sabnzbd, servarr-sabnzbd.media-server, servarr-sabnzbd.media-server.svc.cluster.local
+          host = 0.0.0.0
+          port = 8080
+          https_port = ""
+          username = ""
+          password = ""
+          permissions = 775
+          check_new_rel = 0
+          auto_browser = 0
+          download_dir = /media/downloads/incomplete
+          complete_dir = /media/downloads/complete
+          admin_dir = /config/admin
+          nzb_backup_dir = /config/nzb/backup
+          log_level = 1
+          ipv6_hosting = 0
+    cross-seed-config:
+      data:
+        config.js: |
+          module.exports = {
+            delay: 30,
+            torznab: [],
+            torrentDir: "/qbittorrent/data/BT_backup",
+            outputDir: "/qbittorrent/cross-seed/output",
+            action: "inject",
+            qbittorrentUrl: "http://localhost:8080",
+            includeSingleEpisodes: true,
+            includeEpisodes: true,
+            linkType: "hardlink",
+            linkDirs: ["/media/downloads/complete"],
+            dataDirs: [],
+            matchMode: "safe",
+            port: 2468,
+            host: "0.0.0.0",
+            apiAuth: false,
+          };
+
+# Sub-charts dependencies config
+homarr:
+  enabled: true
+  database:
+    type: postgresql
+  podAnnotations: {}
+  env:
+    AUTH_PROVIDERS: "oidc"
+    AUTH_OIDC_ISSUER: "https://auth.example.com/application/o/homarr/"
+  envSecrets:
+    authOidcCredentials:
+      existingSecret: homarr-oidc-credentials
+    dbCredentials:
+      existingSecret: homarr-db-credentials
+    dbEncryption:
+      existingSecret: homarr-db-encryption
+  httproute:
+    enabled: false
+    # parentRefs:
+    #   - name: my-gateway
+    #     namespace: gateway-system
+    # hostnames:
+    #   - homarr.internal.example.com
+    # rules:
+    #   - matches:
+    #       - path:
+    #           type: PathPrefix
+    #           value: /
+    #     backendRefs:
+    #       - name: servarr-homarr
+    #         port: 7575
+
+servarr:
+  enabled: true

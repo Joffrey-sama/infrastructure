@@ -1,0 +1,12 @@
+dependencies:
+- name: homarr
+  repository: oci://ghcr.io/homarr-labs/charts
+  version: 8.19.0
+- name: servarr
+  repository: file://../servarr
+  version: 0.2.0
+- name: app-template
+  repository: https://bjw-s-labs.github.io/helm-charts/
+  version: 5.0.1
+digest: sha256:afa25e671768e90ba0efa4e872edd6eee863adbc3e7c6164396d1ddf58d18913
+generated: "2026-05-29T21:31:22.008060872+02:00"

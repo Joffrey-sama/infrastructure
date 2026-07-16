@@ -1,0 +1,50 @@
+# API Keys, Tokens and Secrets
+*token*
+*.env
+*.env.*
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+
+# Terraform State and Variables
+*.tfvars
+*.tfvars.json
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+
+# Kubernetes manifests and logs
+*.log
+kubeconfig
+kubeconfig.yaml
+*kubeconfig*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node, Python & Caches
+node_modules/
+.npm/
+.yarn/
+dist/
+build/
+.cache/
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# Local IDEs
+.idea/
+.vscode/
+*.swp
+*.swo

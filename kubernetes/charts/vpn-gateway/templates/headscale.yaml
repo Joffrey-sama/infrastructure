@@ -1,0 +1,108 @@
+{{- if .Values.headscale.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-headscale
+  labels:
+    app.kubernetes.io/name: headscale
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: headscale
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: headscale
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- with .Values.headscale.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: headscale
+          image: "{{ .Values.headscale.image.repository }}:{{ .Values.headscale.image.tag }}"
+          imagePullPolicy: {{ .Values.headscale.image.pullPolicy }}
+          command: ["headscale"]
+          args: ["serve"]          
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          env:
+            - name: HEADSCALE_DATABASE_POSTGRES_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.headscale.database.existingSecret }}
+                  key: {{ .Values.headscale.database.passwordKey }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/headscale/
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/headscale
+            - name: oidc-secret
+              mountPath: /etc/secrets/
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-headscale-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-headscale-data
+        - name: oidc-secret
+          secret:
+            secretName: {{ .Values.headscale.oidc.existingSecret }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-headscale-data
+  labels:
+    app.kubernetes.io/name: headscale
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.global.storageClass }}
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-headscale
+  labels:
+    app.kubernetes.io/name: headscale
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.headscale.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: headscale
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

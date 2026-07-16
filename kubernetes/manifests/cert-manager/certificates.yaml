@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-tls
+  namespace: common-services
+spec:
+  secretName: wildcard-tls
+  issuerRef:
+    name: le-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.example.com"

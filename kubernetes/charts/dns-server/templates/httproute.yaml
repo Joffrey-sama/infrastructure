@@ -1,0 +1,20 @@
+{{- if index .Values "adguard-home" "httproute" "enabled" }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-route
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: adguard-home
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  parentRefs:
+    - name: {{ index .Values "adguard-home" "httproute" "gatewayName" }}
+      namespace: {{ index .Values "adguard-home" "httproute" "gatewayNamespace" }}
+  hostnames:
+    - {{ index .Values "adguard-home" "httproute" "hostname" | quote }}
+  rules:
+    - backendRefs:
+        - name: {{ printf "%s-%s" .Release.Name (index .Values "adguard-home" "httproute" "serviceName") }}
+          port: {{ index .Values "adguard-home" "httproute" "servicePort" }}
+{{- end }}

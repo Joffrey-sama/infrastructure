@@ -1,0 +1,140 @@
+global:
+  storageClass: "standard"
+  timezone: "UTC"
+  puid: "1000" # User ID for file permissions
+  pgid: "1000" # Group ID for file permissions
+  domain: "example.com" # Your internal domain
+
+# ==============================================================================
+# Values for the official Jellyfin chart (dependency)
+# ==============================================================================
+jellyfin:
+  enabled: true
+  image:
+    repository: docker.io/jellyfin/jellyfin
+    tag: ""
+  volumes:
+    - name: gpu-device
+      hostPath:
+        path: /dev/dri
+        type: Directory
+  volumeMounts:
+    - name: gpu-device
+      mountPath: /dev/dri
+      readOnly: false
+  service:
+    type: ClusterIP
+    port: 8096
+  resources:
+    requests:
+      cpu: 150m
+      memory: 256Mi
+    limits:
+      cpu: "2000m" 
+      memory: "2Gi"
+  # User and group configuration IDs for the Jellyfin container
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    supplementalGroups:
+      - 44
+      - 993
+  securityContext:
+    privileged: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+
+  persistence:
+    config: 
+      enabled: true
+      storageClass: ""
+      size: 10Gi
+    media:
+      enabled: true
+      type: pvc
+      storageClass: ""
+      size: 100Gi
+    cache:
+      enabled: false
+      type: pvc
+      storageClass: ""
+      size: 10Gi
+  
+  env:
+    - name: JELLYFIN_FFMPEG_OPT_DISABLE_VAAPI_DRM_MODIFIERS
+      value: "1"
+    - name: LIBVA_DRIVER_NAME
+      value: "iHD"
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+
+  # Expose Jellyfin via HTTPRoute and Gateway API
+  httpRoute:
+    enabled: false
+    parentRefs: []
+    hostnames:
+      - media.internal.example.com
+      - media.external.example.com
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: /
+
+# ==============================================================================
+# Configuration for the provisioning Job
+# ==============================================================================
+provisioner:
+  enabled: true
+  image:
+    # Using a python image and installing dependencies on the fly
+    repository: python
+    tag: "3.9-alpine"
+    pullPolicy: IfNotPresent
+
+  # Jellyfin admin account configuration
+  admin:
+    username: admin
+    # Leave empty to generate a random password to be stored in the secret.
+    password: "" # This will be generated if empty
+    passwordSecretName: "jellyfin-admin-credentials"
+    apiKeySecretName: "jellyfin-api-key"
+
+  # Configuration of plugins to install and configure
+  plugins:
+    ldap:
+      enabled: false
+      version: "22.0.0.0" # Leave empty for the latest version
+      # config:
+      #   LdapServer: "authentik-ldap.common-services.svc.cluster.local"
+      #   LdapPort: 389
+      #   UseSsl: false
+      #   UseStartTls: false
+      #   LdapBindUser: "cn=ldap-bind,ou=users,dc=ldap,dc=example,dc=com"
+      #   ldapBindPasswordSecretName: "jellyfin-bind-credentials"
+      #   LdapBaseDn: "dc=ldap,dc=example,dc=com"
+      #   LdapSearchFilter: "(objectClass=inetOrgPerson)"
+      #   LdapAdminFilter: "(memberOf=cn=Admins,ou=groups,dc=ldap,dc=example,dc=com)"
+      #   CreateUsersFromLdap: true
+
+  # Configuration of libraries to create
+  libraries:
+    - name: "Movies"
+      type: "movies"
+      path: "/media/movies" # Path inside the Jellyfin container
+    - name: "Series"
+      type: "tvshows"
+      path: "/media/series" # Path inside the Jellyfin container
+    - name: "Animes"
+      type: "tvshows"
+      path: "/media/anime" # Path inside the Jellyfin container
+
+  # General configuration of Jellyfin
+  config:
+    serverName: "Media Server"
+    enableMetrics: true

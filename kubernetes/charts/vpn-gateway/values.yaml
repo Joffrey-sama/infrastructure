@@ -1,0 +1,58 @@
+global:
+  storageClass: "local-path"
+
+# ==============================================================================
+# Headscale Configuration (VPN Server & OIDC)
+# ==============================================================================
+headscale:
+  enabled: true
+  podAnnotations: {}
+  image:
+    repository: headscale/headscale
+    tag: 0.28.0
+    pullPolicy: IfNotPresent
+  
+  publicUrl: "https://headscale.delva-home.fr"
+
+  dns:
+    domain: "vpn.delva-home.fr"
+  
+  # OIDC Configuration (Authentik)
+  oidc:
+    enabled: true
+    issuer: "https://auth.delva-home.fr/application/o/headscale/"
+    clientId: "headscale"
+    clientSecretKey: "client_secret"
+    existingSecret: "headscale-oidc-credentials"
+
+  database:
+    type: postgres
+    host: "common-services-postgresql.common-services.svc.cluster.local"
+    port: 5432
+    name: "headscale"
+    user: "headscale"
+    existingSecret: "headscale-postgresql-secret"
+    passwordKey: "PASSWORD_HEADSCALE"
+
+  service:
+    port: 8080
+
+  httproute:
+    enabled: true
+    hostname: "headscale.delva-home.fr"
+    gatewayName: "vpn-gateway"
+    gatewayNamespace: "common-services"
+
+headscaleui:
+  enabled: true
+  podAnnotations: {}
+  image:
+    repository: ghcr.io/gurucomputing/headscale-ui
+    tag: latest
+  service:
+    port: 80
+  httproute:
+    enabled: true
+    hostname: "vpn-admin.internal.delva-home.fr"
+    gatewayName: "internal-gateway"
+    gatewayNamespace: "common-services"

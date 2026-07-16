@@ -1,0 +1,409 @@
+{{- if .Values.provisioner.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-provisioner
+data:
+  provision.py: |
+    import os
+    import requests
+    import time
+    import json
+    import random
+    import string
+    import base64
+    from kubernetes import client, config
+
+    # --- Configuration from Environment Variables ---
+    JELLYFIN_URL = os.environ["JELLYFIN_URL"]
+    ADMIN_USERNAME = os.environ["ADMIN_USERNAME"]
+    ADMIN_PASSWORD_SECRET_NAME = os.environ["ADMIN_PASSWORD_SECRET_NAME"]
+    API_KEY_SECRET_NAME = os.environ["API_KEY_SECRET_NAME"]
+    NAMESPACE = os.environ["NAMESPACE"]
+
+    # --- Static Configuration ---
+    # This header is required for all API calls
+    BASE_HEADERS = {
+        "X-Emby-Authorization": 'MediaBrowser Client="helm-provisioner", Device="k8s-job", DeviceId="{{ .Release.Name }}", Version="1.0"'
+    }
+
+    # --- Kubernetes API Setup ---
+    config.load_incluster_config()
+    k8s_core_v1 = client.CoreV1Api()
+    k8s_apps_v1 = client.AppsV1Api()
+
+    # --- Helper Functions ---
+    def generate_password(length=16):
+        """Generates a random alphanumeric password."""
+        return "".join(random.choice(string.ascii_letters + string.digits) for i in range(length))
+
+    def get_or_create_admin_password():
+        """
+        Gets the admin password from a Kubernetes secret.
+        If the secret doesn't exist, it creates one with a generated password.
+        """
+        try:
+            secret = k8s_core_v1.read_namespaced_secret(name=ADMIN_PASSWORD_SECRET_NAME, namespace=NAMESPACE)
+            print("Admin password secret already exists.")
+            return base64.b64decode(secret.data["password"]).decode("utf-8")
+        except client.ApiException as e:
+            if e.status == 404:
+                print("Admin password secret not found. Creating one...")
+                password = generate_password()
+                secret_body = client.V1Secret(
+                    api_version="v1",
+                    kind="Secret",
+                    metadata=client.V1ObjectMeta(name=ADMIN_PASSWORD_SECRET_NAME),
+                    string_data={"password": password}
+                )
+                k8s_core_v1.create_namespaced_secret(namespace=NAMESPACE, body=secret_body)
+                print("Admin password secret created.")
+                return password
+            else:
+                raise
+
+    def wait_for_jellyfin():
+        """Waits until the Jellyfin API is responsive."""
+        print(f"Waiting for Jellyfin API to be available at {JELLYFIN_URL}...")
+        url = f"{JELLYFIN_URL}/System/Info/Public"
+        while True:
+            try:
+                print(f"  - Pinging {url}...")
+                response = requests.get(url, timeout=5)
+                response.raise_for_status()
+                print("Jellyfin API is up!")
+                return
+            except requests.exceptions.RequestException as e:
+                print(f"  - Jellyfin not ready yet. Retrying in 5 seconds. (Error: {e})")
+                time.sleep(5)
+
+    def get_api_key(admin_user, admin_pass):
+        """Authenticates and returns an API key."""
+        print("Authenticating as admin to get API key...")
+        url = f"{JELLYFIN_URL}/Users/AuthenticateByName"
+        print(f"  - Calling POST {url}")
+        response = requests.post(url, headers=BASE_HEADERS, json={"Username": admin_user, "Pw": admin_pass})
+        response.raise_for_status()
+        api_key = response.json()["AccessToken"]
+        print("Successfully authenticated.")
+        return api_key
+
+    def complete_startup_wizard(admin_user, admin_pass):
+        """Completes the initial Jellyfin setup wizard if it's not already done."""
+        # First, check if the server is already configured by trying to authenticate.
+        try:
+            get_api_key(admin_user, admin_pass)
+            print("Startup wizard already completed (user exists).")
+            return
+        except requests.exceptions.HTTPError as e:
+            # A 401/404 error here likely means the user doesn't exist, so the wizard needs to run.
+            if e.response.status_code in [401, 404]:
+                print("Admin user not found, proceeding with startup wizard.")
+            else:
+                # Re-raise other unexpected errors
+                raise
+
+        print("Completing startup wizard...")
+        
+        # 1. Set server name and language configuration first.
+        server_name = os.environ.get("SERVER_NAME", "My Jellyfin Server")
+        uiculture = os.environ.get("UICULTURE", "en-US")
+        metadata_country_code = os.environ.get("METADATA_COUNTRY_CODE", "US")
+        preferred_metadata_language = os.environ.get("PREFERRED_METADATA_LANGUAGE", "en")
+        url = f"{JELLYFIN_URL}/Startup/Configuration"
+        print(f"  - Calling POST {url} to set server name.")
+        requests.post(url, headers=BASE_HEADERS, json={"FriendlyName": server_name, "UICulture": uiculture, "MetadataCountryCode": metadata_country_code, "PreferredMetadataLanguage": preferred_metadata_language}).raise_for_status()
+        
+        # 2. Get First User status
+        url = f"{JELLYFIN_URL}/Startup/FirstUser"
+        print(f"  - Calling GET {url} to check for first user.")
+        requests.get(url, headers=BASE_HEADERS).raise_for_status()
+        
+        # 3. Create initial user
+        url = f"{JELLYFIN_URL}/Startup/User"
+        print(f"  - Calling POST {url} to create admin user.")
+        requests.post(url, headers=BASE_HEADERS, json={"Name": admin_user, "Password": admin_pass}).raise_for_status()
+        
+        # 4. Complete the wizard
+        url = f"{JELLYFIN_URL}/Startup/Complete"
+        print(f"  - Calling POST {url} to complete wizard.")
+        requests.post(url, headers=BASE_HEADERS).raise_for_status()
+        print("Startup wizard completed.")
+
+    def store_api_key_in_secret(api_key):
+        """Creates or updates a Kubernetes secret with the API key."""
+        secret_name = API_KEY_SECRET_NAME
+        try:
+            k8s_core_v1.read_namespaced_secret(name=secret_name, namespace=NAMESPACE)
+            print("API key secret already exists. Patching...")
+            secret_body = {"stringData": {"api-key": api_key}}
+            k8s_core_v1.patch_namespaced_secret(name=secret_name, namespace=NAMESPACE, body=secret_body)
+        except client.ApiException as e:
+            if e.status == 404:
+                print("Creating API key secret...")
+                secret_body = client.V1Secret(
+                    api_version="v1",
+                    kind="Secret",
+                    metadata=client.V1ObjectMeta(name=secret_name),
+                    string_data={"api-key": api_key}
+                )
+                k8s_core_v1.create_namespaced_secret(namespace=NAMESPACE, body=secret_body)
+            else:
+                raise
+        print("API key secret stored.")
+
+    def restart_jellyfin_pod():
+        """Finds and deletes the Jellyfin pod to force a restart."""
+        pod_label_selector = "app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/name=jellyfin"
+        print(f"Restarting Jellyfin pod with label selector: {pod_label_selector}")
+        try:
+            pods = k8s_core_v1.list_namespaced_pod(namespace=NAMESPACE, label_selector=pod_label_selector)
+            if not pods.items:
+                print("  - Could not find Jellyfin pod to restart.")
+                return
+
+            pod_name = pods.items[0].metadata.name
+            print(f"  - Found Jellyfin pod '{pod_name}'. Deleting to trigger restart...")
+            k8s_core_v1.delete_namespaced_pod(name=pod_name, namespace=NAMESPACE)
+            print("  - Deletion command sent. Waiting for pod to terminate...")
+            # A simple sleep is enough here, as the subsequent wait_for_jellyfin() will handle the readiness check.
+            time.sleep(15)
+            print("  - Pod has been deleted.")
+        except client.ApiException as e:
+            print(f"  - Error restarting Jellyfin pod: {e}")
+
+    def install_plugin(auth_headers, plugin_name, plugin_guid, version):
+        """Checks if a plugin is installed and installs it if not."""
+        print(f"Checking for plugin '{plugin_name}'...")
+        url = f"{JELLYFIN_URL}/Plugins"
+        try:
+            print(f"  - Calling GET {url}")
+            response = requests.get(url, headers=auth_headers)
+            response.raise_for_status()
+            plugins = response.json()
+            
+            # Normalize GUID for comparison (remove dashes)
+            normalized_guid = plugin_guid.replace("-", "")
+            
+            # Find plugins matching Name OR ID
+            found_plugins = []
+            for p in plugins:
+                p_name = p.get('Name', '')
+                p_id = p.get('Id', '')
+                if p_name == plugin_name or p_id == plugin_guid or p_id == normalized_guid:
+                    found_plugins.append(p)
+
+            if found_plugins:
+                # Check if any is Active (prioritize Active status over Restart)
+                active_plugin = next((p for p in found_plugins if p.get('Status') == 'Active'), None)
+                if active_plugin:
+                    print(f"Plugin '{plugin_name}' (found as '{active_plugin.get('Name')}') is installed and active.")
+                    return False
+                
+                # If no active instance, check if any is pending restart
+                restart_plugin = next((p for p in found_plugins if p.get('Status') == 'Restart'), None)
+                if restart_plugin:
+                    print(f"Plugin '{plugin_name}' is pending restart.")
+                    return True
+
+            # Resolve version if not specified or "latest"
+            if not version or version == "latest":
+                print(f"Resolving latest version for '{plugin_name}'...")
+                try:
+                    pkg_url = f"{JELLYFIN_URL}/Packages"
+                    pkg_resp = requests.get(pkg_url, headers=auth_headers)
+                    pkg_resp.raise_for_status()
+                    packages = pkg_resp.json()
+                    # Find the package info
+                    pkg_info = next((p for p in packages if p.get('name') == plugin_name), None)
+                    if pkg_info and pkg_info.get('versions'):
+                        version = pkg_info['versions'][0].get('version')
+                        print(f"  - Resolved to version '{version}'")
+                except Exception as e:
+                    print(f"  - Warning: Could not resolve latest version: {e}")
+
+            print(f"Installing plugin '{plugin_name}' version '{version}'...")
+            # The package name must be part of the URL path.
+            install_url = f"{JELLYFIN_URL}/Packages/Installed/{plugin_name}"
+            params = {
+                "assemblyGuid": plugin_guid,
+                "version": version
+            }
+            print(f"  - Calling POST {install_url}")
+            response = requests.post(install_url, headers=auth_headers, params=params)
+            response.raise_for_status()
+            print(f"Installation command for '{plugin_name}' sent. A server restart will be required to complete the process.")
+            return True # Restart is needed
+        except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
+            print(f"  - Error during plugin installation check: {e}")
+            # We can choose to continue and try to configure anyway, or exit.
+            # For now, we'll log the error and proceed.
+            return False
+
+    def configure_ldap_plugin(auth_headers):
+        """Installs and/or configures the LDAP plugin."""
+        if os.environ.get("LDAP_ENABLED") != "true":
+            return False # No restart needed
+
+        restart_needed = install_plugin(auth_headers, "LDAP Authentication", "958aad66-3784-4d2a-b89a-a7b6fab6e25c", os.environ["LDAP_VERSION"])
+        
+        if restart_needed:
+            print("Plugin installation/update pending restart. Skipping configuration for now.")
+            return True
+
+        print("Configuring LDAP plugin...")
+        plugin_id = "958aad66-3784-4d2a-b89a-a7b6fab6e25c"
+        
+        # Retrieve the actual Plugin ID from the server (it might differ from the assembly GUID)
+        try:
+            url = f"{JELLYFIN_URL}/Plugins"
+            response = requests.get(url, headers=auth_headers)
+            if response.status_code == 200:
+                normalized_guid = "958aad6637844d2ab89aa7b6fab6e25c"
+                for p in response.json():
+                    p_id = p.get("Id", "")
+                    # Check by ID (with or without dashes) or Name, and ensure it's Active
+                    if (p_id == normalized_guid or p_id == "958aad66-3784-4d2a-b89a-a7b6fab6e25c" or p.get("Name") == "LDAP-Auth") and p.get("Status") == "Active":
+                        plugin_id = p_id
+                        print(f"  - Resolved active plugin ID to: {plugin_id}")
+                        break
+        except Exception:
+            pass
+        
+        # Configuration from environment variables
+        ldap_config = {
+            "LdapServer": os.environ["LDAP_SERVER"],
+            "LdapPort": 389,
+            "UseSsl": False,
+            "UseStartTls": False,
+            "LdapBindUser": os.environ["LDAP_BIND_USER"],
+            "LdapBindPassword": os.environ["LDAP_BIND_PASSWORD"],
+            "LdapBaseDn": os.environ["LDAP_BASE_DN"],
+            "LdapSearchFilter": os.environ["LDAP_SEARCH_FILTER"],
+            "LdapAdminFilter": os.environ["LDAP_ADMIN_FILTER"],
+            "CreateUsersFromLdap": True,
+            "EnableAccessToAllLibraries": True
+        }
+
+        # It's possible the plugin isn't fully available until a restart.
+        # We'll wrap this in a try...except block to handle the 404 gracefully.
+        try:
+            url = f"{JELLYFIN_URL}/Plugins/{plugin_id}/Configuration"
+            print(f"  - Calling POST {url}")
+            # Configure the plugin
+            response = requests.post(url, headers=auth_headers, json=ldap_config)
+            response.raise_for_status()
+            print("LDAP plugin configured.")
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                print("Warning: Could not configure LDAP plugin (404 Not Found). This is expected if the plugin was just installed. A server restart is required.")
+            else:
+                raise # Re-raise other HTTP errors
+        return restart_needed
+
+    def create_libraries(auth_headers):
+        """Creates media libraries defined in the Helm values."""
+        print("Processing libraries...")
+        
+        # This part is tricky as we can't directly read Helm values.
+        # We'll rely on a convention or pass them as env vars if needed.
+        # For now, let's use the ones from the values.yaml as an example.
+        libraries_to_create = json.loads("""{{ .Values.provisioner.libraries | toJson }}""")
+
+        # Get existing libraries to avoid duplicates
+        url = f"{JELLYFIN_URL}/Library/VirtualFolders"
+        print(f"  - Calling GET {url} to list existing libraries.")
+        response = requests.get(url, headers=auth_headers)
+        response.raise_for_status()
+        existing_libs = [lib.get("Name") for lib in response.json()]
+
+        for lib in libraries_to_create:
+            name, lib_type, path = lib["name"], lib["type"], lib["path"]
+            
+            # Ensure directory exists on the PVC before calling API
+            if not os.path.exists(path):
+                print(f"Directory '{path}' does not exist. Creating it...")
+                try:
+                    os.makedirs(path, exist_ok=True)
+                    print(f"Directory '{path}' created.")
+                except Exception as e:
+                    print(f"Warning: Failed to create directory '{path}': {e}")
+
+            if name not in existing_libs:
+                print(f"Creating library '{name}'...")
+                params = {
+                    "name": name,
+                    "collectionType": lib_type,
+                    "paths": path,
+                    "refreshLibrary": "true"
+                }
+                # The API expects query parameters for the folder details,
+                # and an optional JSON body for library-specific options.
+                # We send an empty LibraryOptions object in the body to be compliant.
+                payload = {
+                    "LibraryOptions": {}
+                }
+                url = f"{JELLYFIN_URL}/Library/VirtualFolders"
+                print(f"  - Calling POST {url} to create library '{name}'.")
+                requests.post(url, headers=auth_headers, params=params, json=payload).raise_for_status()
+                print(f"Library '{name}' created.")
+            else:
+                print(f"Library '{name}' already exists.")
+
+    def run_provisioning_steps():
+        """
+        Executes the core provisioning logic. Returns True if a restart was triggered.
+        """
+        # 1. Wait for Jellyfin to be ready
+        wait_for_jellyfin()
+
+        # 2. Get admin password (from secret or generate)
+        admin_pass = get_or_create_admin_password()
+
+        # 3. Complete startup wizard if needed (this is idempotent)
+        complete_startup_wizard(ADMIN_USERNAME, admin_pass)
+
+        # 4. Authenticate and get API key
+        api_key = get_api_key(ADMIN_USERNAME, admin_pass)
+        store_api_key_in_secret(api_key)
+
+        # 5. Prepare authenticated headers for subsequent calls
+        auth_headers = BASE_HEADERS.copy()
+        auth_headers["X-MediaBrowser-Token"] = api_key
+
+        # 6. Configure plugins
+        restart_required = configure_ldap_plugin(auth_headers)
+        if restart_required:
+            return True # Signal to the orchestrator that a restart is needed
+
+        # 7. Create libraries
+        create_libraries(auth_headers)
+        
+        return False # No restart was needed
+
+    def main_orchestrator():
+        try:
+            print("--- Starting Jellyfin Provisioning Script (Python) ---")
+            
+            # First run of the provisioning logic
+            if run_provisioning_steps():
+                # A restart was triggered.
+                print("--- Restarting Jellyfin to apply plugin changes ---")
+                restart_jellyfin_pod()
+                print("--- Jellyfin is restarting, waiting for it to be available again... ---")
+                wait_for_jellyfin()
+                print("--- Jellyfin has restarted. Re-running provisioning to configure plugins. ---")
+                
+                # "Recursive" call to the provisioning logic after restart
+                run_provisioning_steps()
+
+            print("--- Jellyfin Provisioning Script Finished Successfully ---")
+
+        except Exception as e:
+            print(f"!!! An error occurred during provisioning: {e}", flush=True)
+            # Exit with a non-zero status code to make the Kubernetes Job fail
+            exit(1)
+
+    if __name__ == "__main__":
+        main_orchestrator()
+{{- end }}

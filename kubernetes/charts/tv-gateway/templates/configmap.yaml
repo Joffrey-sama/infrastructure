@@ -1,0 +1,10 @@
+{{- range .Values.iptv_instances }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-threadfin-config-{{ .name }}
+data:
+  settings.json: |
+    {{- $.Values.settings | toJson | nindent 4 }}
+{{- end }}

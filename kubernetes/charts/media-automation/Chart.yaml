@@ -1,0 +1,20 @@
+apiVersion: v2
+name: media-automation
+description: A Helm chart for media automation tools (qBittorrent, Sabnzbd, Homarr, and the Servarr suite)
+type: application
+version: 0.3.0
+appVersion: "1.16.0"
+
+dependencies:
+  - name: homarr
+    version: "8.19.0"
+    repository: "oci://ghcr.io/homarr-labs/charts"
+    condition: homarr.enabled
+  - name: servarr
+    version: "0.2.0"
+    repository: "file://../servarr"
+    condition: servarr.enabled
+  - name: app-template
+    version: "5.0.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
+    alias: main

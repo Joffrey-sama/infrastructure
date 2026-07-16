@@ -1,0 +1,156 @@
+{{- if .Values.provisioner.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-orchestrator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "servarr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: orchestrator
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    metadata:
+      {{- with .Values.provisioner.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "servarr.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: orchestrator
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: orchestrator
+          image: "nicolaka/netshoot"
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: servarr-api-key
+                  key: api-key
+            - name: JELLYFIN_ADMIN_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.provisioner.jellyfin.adminSecretName }}
+                  key: password
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              
+              # --- Variables d'URL (Scope global via variables shell) ---
+              PROWLARR_HOST="{{ .Release.Name }}-prowlarr"
+              RADARR_HOST="{{ .Release.Name }}-radarr"
+              SONARR_HOST="{{ .Release.Name }}-sonarr"
+              
+              PROWLARR_URL="http://${PROWLARR_HOST}:9696/api/v1"
+              RADARR_URL="http://${RADARR_HOST}:7878/api/v3"
+              SONARR_URL="http://${SONARR_HOST}:8989/api/v3"
+
+              log() { echo -e "\e[34m[$(date +%T)] [INFO]\e[0m $1"; }
+
+              # --- Attente des APIs ---
+              wait_for() {
+                until [ "$(curl -s -o /dev/null -w "%{http_code}" "$1/system/status?apiKey=$API_KEY")" == "200" ]; do
+                  log "Waiting for $2..."
+                  sleep 2
+                done
+              }
+
+              wait_for "$PROWLARR_URL" "Prowlarr"
+              wait_for "$RADARR_URL" "Radarr"
+              wait_for "$SONARR_URL" "Sonarr"
+
+              # --- 1. PROWLARR : Liaison Indexeurs ---
+              log "Prowlarr: Connecting Radarr & Sonarr..."
+              
+              curl -s -X POST "$PROWLARR_URL/applications?apiKey=$API_KEY" -H "Content-Type: application/json" -d "{
+                \"name\": \"Radarr\",
+                \"implementation\": \"Radarr\",
+                \"configContract\": \"RadarrSettings\",
+                \"fields\": [
+                  {\"name\": \"prowlarrUrl\", \"value\": \"http://${PROWLARR_HOST}:9696\"},
+                  {\"name\": \"baseUrl\", \"value\": \"http://${RADARR_HOST}:7878\"},
+                  {\"name\": \"apiKey\", \"value\": \"$API_KEY\"}
+                ]
+              }"
+
+              curl -s -X POST "$PROWLARR_URL/applications?apiKey=$API_KEY" -H "Content-Type: application/json" -d "{
+                \"name\": \"Sonarr\",
+                \"implementation\": \"Sonarr\",
+                \"configContract\": \"SonarrSettings\",
+                \"fields\": [
+                  {\"name\": \"prowlarrUrl\", \"value\": \"http://${PROWLARR_HOST}:9696\"},
+                  {\"name\": \"baseUrl\", \"value\": \"http://${SONARR_HOST}:8989\"},
+                  {\"name\": \"apiKey\", \"value\": \"$API_KEY\"}
+                ]
+              }"
+
+              # --- 2. STORAGE & CLIENTS ---
+              log "Servarr: Setting RootFolders and Download Client..."
+              
+              curl -s -X POST "$RADARR_URL/rootfolder?apiKey=$API_KEY" -H "Content-Type: application/json" -d '{"path":"/media/movies"}'
+              curl -s -X POST "$SONARR_URL/rootfolder?apiKey=$API_KEY" -H "Content-Type: application/json" -d '{"path":"/media/tv"}'
+
+              {{- if .Values.provisioner.downloadClient.host }}
+              curl -s -X POST "$RADARR_URL/downloadclient?apiKey=$API_KEY" -H "Content-Type: application/json" -d "{
+                \"enable\": true,
+                \"name\": \"qBit\",
+                \"implementation\": \"QBittorrent\",
+                \"configContract\": \"QBittorrentSettings\",
+                \"fields\": [
+                  {\"name\": \"host\", \"value\": \"{{ .Values.provisioner.downloadClient.host }}\"},
+                  {\"name\": \"port\", \"value\": {{ .Values.provisioner.downloadClient.port }}},
+                  {\"name\": \"nopassword\", \"value\": true}
+                ]
+              }"
+              {{- end }}
+
+              {{- if .Values.provisioner.seerr.enabled }}
+              # --- 3. SEERR : Initialisation ---
+              SEERR_HOST="{{ .Values.provisioner.seerr.host }}"
+              SEERR_PORT="{{ .Values.provisioner.seerr.port }}"
+              SEERR_URL="http://${SEERR_HOST}:${SEERR_PORT}/api/v1"
+
+              log "Seerr: Authenticating via Jellyfin..."
+              PAYLOAD="{\"username\":\"admin\",\"password\":\"$JELLYFIN_ADMIN_PASS\",\"hostname\":\"{{ .Values.provisioner.jellyfin.serverHostname }}\",\"port\":8096,\"useSsl\":false,\"urlBase\":\"\",\"serverType\":2}"
+              
+              # Wait for Seerr web API to be responsive
+              until curl -s -o /dev/null -w "%{http_code}" "$SEERR_URL/settings/public" | grep -E "200|401" > /dev/null; do
+                log "Waiting for Seerr at $SEERR_URL..."
+                sleep 2
+              done
+
+              AUTH_RES=$(curl -s -i -X POST "$SEERR_URL/auth/jellyfin" -H "Content-Type: application/json" -d "$PAYLOAD")
+              COOKIE=$(echo "$AUTH_RES" | grep -i "set-cookie:" | grep "connect.sid" | cut -d' ' -f2 | cut -d';' -f1)
+
+              if [ -n "$COOKIE" ]; then
+                # Radarr Sync
+                log "Seerr: Linking Radarr..."
+                R_TEST=$(curl -s -X POST "$SEERR_URL/settings/radarr/test" -H "Cookie: $COOKIE" -H "Content-Type: application/json" -d "{\"hostname\":\"${RADARR_HOST}\",\"apiKey\":\"$API_KEY\",\"port\":7878}")
+                R_ID=$(echo "$R_TEST" | jq '.[0].id // 1')
+                R_NAME=$(echo "$R_TEST" | jq -r '.[0].name // "Any"')
+
+                curl -s -X POST "$SEERR_URL/settings/radarr" -H "Cookie: $COOKIE" -H "Content-Type: application/json" -d "{\"name\":\"Radarr\",\"hostname\":\"${RADARR_HOST}\",\"port\":7878,\"apiKey\":\"$API_KEY\",\"isDefault\":true,\"minimumAvailability\":\"announced\",\"rootFolder\":\"/media/movies\",\"activeProfileId\":$R_ID,\"activeProfileName\":\"$R_NAME\",\"activeDirectory\":\"/media/movies\",\"is4k\":false}"
+
+                # Sonarr Sync
+                log "Seerr: Linking Sonarr..."
+                S_TEST=$(curl -s -X POST "$SEERR_URL/settings/sonarr/test" -H "Cookie: $COOKIE" -H "Content-Type: application/json" -d "{\"hostname\":\"${SONARR_HOST}\",\"apiKey\":\"$API_KEY\",\"port\":8989}")
+                S_ID=$(echo "$S_TEST" | jq '.[0].id // 1')
+                S_NAME=$(echo "$S_TEST" | jq -r '.[0].name // "Any"')
+
+                curl -s -X POST "$SEERR_URL/settings/sonarr" -H "Cookie: $COOKIE" -H "Content-Type: application/json" -d "{\"name\":\"Sonarr\",\"hostname\":\"${SONARR_HOST}\",\"port\":8989,\"apiKey\":\"$API_KEY\",\"isDefault\":true,\"rootFolder\":\"/media/tv\",\"activeProfileId\":$S_ID,\"activeProfileName\":\"$S_NAME\",\"activeDirectory\":\"/media/tv\",\"is4k\":false,\"enableSeasonFolders\":true}"
+
+                curl -s -X POST "$SEERR_URL/settings/initialize" -H "Cookie: $COOKIE" -H "Content-Type: application/json" -d "{}"
+                log "🎉 Seerr integration complete."
+              else
+                log "⚠️ Failed to authenticate cookie for Seerr provisioning."
+              fi
+              {{- end }}
+              
+              log "🎉 Provisioning complete."
+{{- end }}

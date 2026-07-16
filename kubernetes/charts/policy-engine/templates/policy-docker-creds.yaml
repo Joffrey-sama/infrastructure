@@ -1,0 +1,28 @@
+{{- if .Values.kyverno.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-docker-hub-creds
+  annotations:
+    policies.kyverno.io/title: Add Docker Hub Credentials
+    policies.kyverno.io/category: Supply Chain
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Injects the global docker-hub-creds secret into all pods to avoid Docker Hub rate limiting.
+      The secret must exist in the pod's namespace (handled by Reflector).
+spec:
+  background: false # Disable background scanning to avoid mutating existing pods (immutable)
+  rules:
+  - name: add-image-pull-secret
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+    mutate:
+      patchStrategicMerge:
+        spec:
+          imagePullSecrets:
+          - name: docker-hub-creds
+{{- end }}

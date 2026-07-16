@@ -1,0 +1,149 @@
+{{- if .Values.provisioner.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-provisioner
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: provisioner
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ .Release.Name }}-provisioner
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: provisioner
+          image: "{{ .Values.provisioner.image.repository }}:{{ .Values.provisioner.image.tag }}"
+          imagePullPolicy: {{ .Values.provisioner.image.pullPolicy }}
+          # Install dependencies then run the python script
+          command: ["/bin/sh", "-c"]
+          args: [
+            "set -e; \
+            echo '--- Step 1: Installing Python dependencies ---'; \
+            pip install requests kubernetes; \
+            echo '--- Step 2: Dependencies installed. Running provisioning script. ---'; \
+            python /script/provision.py"
+          ]
+          env:
+            - name: HOME
+              value: "/tmp"
+            - name: JELLYFIN_URL
+              value: "http://{{ .Release.Name }}-jellyfin:8096"
+            - name: ADMIN_USERNAME
+              value: {{ .Values.provisioner.admin.username | quote }}
+            - name: ADMIN_PASSWORD_SECRET_NAME
+              value: {{ .Values.provisioner.admin.passwordSecretName | quote }}
+            - name: API_KEY_SECRET_NAME
+              value: {{ .Values.provisioner.admin.apiKeySecretName | quote }}
+            - name: NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            # --- Config Jellyfin ---
+            - name: SERVER_NAME
+              value: {{ .Values.provisioner.config.serverName | quote }}
+            # --- Config Plugin LDAP ---
+            - name: LDAP_ENABLED
+              value: {{ .Values.provisioner.plugins.ldap.enabled | quote }}
+            {{- if .Values.provisioner.plugins.ldap.enabled }}
+            - name: LDAP_VERSION
+              value: {{ .Values.provisioner.plugins.ldap.version | quote }}
+            - name: LDAP_SERVER
+              value: {{ .Values.provisioner.plugins.ldap.config.LdapServer | quote }}
+            - name: LDAP_BIND_USER
+              value: {{ .Values.provisioner.plugins.ldap.config.LdapBindUser | quote }}
+            - name: LDAP_BIND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.provisioner.plugins.ldap.config.ldapBindPasswordSecretName }}
+                  key: password
+            - name: LDAP_BASE_DN
+              value: {{ .Values.provisioner.plugins.ldap.config.LdapBaseDn | quote }}
+            - name: LDAP_SEARCH_FILTER
+              value: {{ .Values.provisioner.plugins.ldap.config.LdapSearchFilter | quote }}
+            - name: LDAP_ADMIN_FILTER
+              value: {{ .Values.provisioner.plugins.ldap.config.LdapAdminFilter | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: provision-script
+              mountPath: /script/provision.py
+              subPath: provision.py
+            - name: media
+              mountPath: /media
+      volumes:
+        - name: provision-script
+          configMap:
+            name: {{ .Release.Name }}-provisioner
+            defaultMode: 0755
+        - name: media
+          {{- if eq .Values.jellyfin.persistence.media.type "pvc" }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.jellyfin.persistence.media.existingClaim | default (printf "%s-jellyfin-media" .Release.Name) }}
+          {{- else if eq .Values.jellyfin.persistence.media.type "hostPath" }}
+          hostPath:
+            path: {{ .Values.jellyfin.persistence.media.hostPath }}
+            type: Directory
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+---
+# RBAC to allow the Job to create/manage secrets
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-provisioner
+  labels:
+    app.kubernetes.io/component: provisioner
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    # "helm.sh/hook": post-install,post-upgrade
+    # "helm.sh/hook-delete-policy": before-hook-creation
+    "meta.helm.sh/release-name": "{{ .Release.Name }}"
+    "meta.helm.sh/release-namespace": "{{ .Release.Namespace }}"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-provisioner
+  labels:
+    app.kubernetes.io/component: provisioner
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    # "helm.sh/hook": post-install,post-upgrade
+    # "helm.sh/hook-delete-policy": before-hook-creation
+    "meta.helm.sh/release-name": "{{ .Release.Name }}"
+    "meta.helm.sh/release-namespace": "{{ .Release.Namespace }}"
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-provisioner
+  labels:
+    app.kubernetes.io/component: provisioner
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    # "helm.sh/hook": post-install,post-upgrade
+    # "helm.sh/hook-delete-policy": before-hook-creation
+    "meta.helm.sh/release-name": "{{ .Release.Name }}"
+    "meta.helm.sh/release-namespace": "{{ .Release.Namespace }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-provisioner
+subjects:
+- kind: ServiceAccount
+  name: {{ .Release.Name }}-provisioner
+{{- end }}

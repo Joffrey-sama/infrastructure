@@ -1,0 +1,13 @@
+{{- range .Values.iptv_instances }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-threadfin-{{ .name }}
+spec:
+  ports:
+    - port: 34400 # Keep the port fixed at 34400
+      targetPort: 34400
+  selector:
+    app: {{ $.Release.Name }}-threadfin-{{ .name }}
+{{- end }}

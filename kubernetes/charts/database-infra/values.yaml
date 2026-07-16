@@ -1,0 +1,12 @@
+global:
+  storageClass: "local-path"
+
+postgresql:
+  enabled: false
+
+provisionDatabases:
+  enabled: false
+  postgresHost: ""
+  podAnnotations: {}
+  image: "docker.io/library/postgres:16"
+  databases: []

@@ -1,0 +1,21 @@
+{{- range .Values.iptv_instances }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-threadfin-{{ .name }}
+spec:
+  parentRefs:
+    - name: internal-gateway
+      namespace: common-services
+  hostnames:
+    - {{ .hostname | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ $.Release.Name }}-threadfin-{{ .name }}
+          port: 34400
+{{- end }}

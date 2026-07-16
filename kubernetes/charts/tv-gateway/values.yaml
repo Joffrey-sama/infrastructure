@@ -1,0 +1,23 @@
+iptv_instances:
+  - name: spain
+    country: "Spain"
+    hostname: liga.internal.delva-home.fr
+  - name: belgium
+    country: "Belgium"
+    hostname: rtbf.internal.delva-home.fr
+
+podAnnotations: {}
+
+settings:
+  bindIpAddress: "0.0.0.0"
+  port: "34400"
+  ssdp: true
+  tuner: 1
+  epgSource: "PMS"
+
+gluetun:
+  localNetwork: "10.42.0.0/16,10.43.0.0/16"
+  outboundSubnets: "10.42.0.0/16,10.43.0.0/16"
+
+env:
+  WIREGUARD_ADDRESSES: "10.155.78.218/32"

@@ -1,0 +1,30 @@
+# Authentik connection settings
+authentik_url   = "https://auth.example.com"
+authentik_token = "placeholder_for_authentik_api_token"
+
+# Initial admin credentials & profile info
+initial_admin_password = "placeholder_for_secure_admin_password"
+admin_username         = "admin"
+admin_full_name        = "Admin User"
+admin_email            = "admin@example.com"
+
+# Application OAuth/OIDC Redirect URIs
+grafana_redirect_uri   = "https://grafana.example.com/login/generic_oauth"
+headscale_redirect_uri = "https://vpn.example.com/application/o/headscale/callback"
+headlamp_redirect_uri  = "https://headlamp.example.com/oidc-callback"
+
+# LDAP Directory Configuration
+ldap_base_dn       = "dc=ldap,dc=example,dc=com"
+ldap_bind_password = "placeholder_for_ldap_bind_password"
+
+# Kubernetes Cluster integration
+cluster_namespace               = "common-services"
+authentik_internal_host         = "http://iam-authentik-server"
+resource_naming_template        = "iam-authentik-%(name)s"
+cluster_service_connection_name = "Local Kubernetes Cluster"
+
+# OIDC Client Secrets for downstream applications
+grafana_client_secret   = "placeholder_for_grafana_client_secret"
+headscale_client_secret = "placeholder_for_headscale_client_secret"
+headlamp_client_secret  = "placeholder_for_headlamp_client_secret"
+homarr_client_secret    = "placeholder_for_homarr_client_secret"

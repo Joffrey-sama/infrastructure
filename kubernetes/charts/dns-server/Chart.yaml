@@ -1,0 +1,9 @@
+apiVersion: v2
+name: dns-server
+description: A Helm chart for deploying AdGuard Home for local DNS resolution and ad-blocking.
+type: application
+version: 0.1.0
+dependencies:
+  - name: adguard-home
+    version: "0.3.25" # Stable and popular version
+    repository: "https://gabe565.github.io/charts"

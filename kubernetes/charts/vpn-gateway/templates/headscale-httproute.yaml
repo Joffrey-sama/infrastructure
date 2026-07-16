@@ -1,0 +1,35 @@
+{{- if .Values.headscale.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-headscale
+  namespace: {{ .Release.Namespace }}
+spec:
+  parentRefs:
+    - name: {{ .Values.headscale.httproute.gatewayName }}
+      namespace: {{ .Values.headscale.httproute.gatewayNamespace }}
+  hostnames:
+    - {{ .Values.headscale.httproute.hostname | quote }}
+  rules:
+    - backendRefs:
+        - name: {{ .Release.Name }}-headscale
+          port: {{ .Values.headscale.service.port }}
+{{- end }}
+---
+{{- if .Values.headscaleui.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-headscale-ui
+  namespace: {{ .Release.Namespace }}
+spec:
+  parentRefs:
+    - name: {{ index .Values "headscaleui" "httproute" "gatewayName" }}
+      namespace: {{ index .Values "headscaleui" "httproute" "gatewayNamespace" }}
+  hostnames:
+    - {{ index .Values "headscaleui" "httproute" "hostname" | quote }}
+  rules:
+    - backendRefs:
+        - name: {{ .Release.Name }}-headscale-ui
+          port: {{ index .Values "headscaleui" "service" "port" }}
+{{- end }}

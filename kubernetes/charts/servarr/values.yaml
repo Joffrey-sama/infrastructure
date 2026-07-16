@@ -1,0 +1,371 @@
+global:
+  imagePullPolicy: IfNotPresent
+  storageClass: "local-path"
+  timezone: "Europe/Paris"
+  puid: 1000
+  pgid: 1000
+  domain: "example.com"
+
+serviceAccount:
+  create: false
+
+main:
+
+  controllers:
+    flaresolverr:
+      enabled: true
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: ghcr.io/flaresolverr/flaresolverr
+            tag: latest
+
+    prowlarr:
+      enabled: true
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: ghcr.io/hotio/prowlarr
+            tag: release
+          probes:
+            liveness:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 9696
+            readiness:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 9696
+            startup:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 9696
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+          env:
+            - name: PROWLARR__AUTH__REQUIRED
+              value: DisabledForLocalAddresses
+            - name: PROWLARR__AUTH__METHOD
+              value: "Forms"
+            # Database: Defaults to SQLite (local file in /config). 
+            # To use PostgreSQL, uncomment and override these in your environment values:
+            # - name: PROWLARR__POSTGRES__HOST
+            #   value: "postgresql-host"
+            # - name: PROWLARR__POSTGRES__PORT
+            #   value: "5432"
+            # - name: PROWLARR__POSTGRES__USER
+            #   value: "prowlarr"
+            # - name: PROWLARR__POSTGRES__MAINDB
+            #   value: "prowlarr"
+            # - name: PROWLARR__POSTGRES__PASSWORD
+            #   valueFrom: { secretKeyRef: { name: prowlarr-postgresql-secret, key: PASSWORD_PROWLARR } }
+            - name: PROWLARR__AUTH__APIKEY
+              valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+    radarr:
+      enabled: true
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: ghcr.io/hotio/radarr
+            tag: release
+          probes:
+            liveness:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 7878
+            readiness:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 7878
+            startup:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 7878
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+          env:
+            - name: RADARR__AUTH__METHOD
+              value: "Forms"
+            - name: RADARR__AUTH__REQUIRED
+              value: DisabledForLocalAddresses
+            # Database: Defaults to SQLite (local file in /config). 
+            # To use PostgreSQL, uncomment and override these in your environment values:
+            # - name: RADARR__POSTGRES__HOST
+            #   value: "postgresql-host"
+            # - name: RADARR__POSTGRES__PORT
+            #   value: "5432"
+            # - name: RADARR__POSTGRES__USER
+            #   value: "radarr"
+            # - name: RADARR__POSTGRES__MAINDB
+            #   value: "radarr"
+            # - name: RADARR__POSTGRES__PASSWORD
+            #   valueFrom: { secretKeyRef: { name: radarr-postgresql-secret, key: PASSWORD_RADARR } }
+            - name: RADARR__AUTH__APIKEY
+              valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
+
+    sonarr:
+      enabled: true
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: ghcr.io/hotio/sonarr
+            tag: release
+          probes:
+            liveness:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 8989
+            readiness:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 8989
+            startup:
+              enabled: true
+              type: HTTP
+              path: /ping
+              port: 8989
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+          env:
+            - name: SONARR__AUTH__METHOD
+              value: "Forms"
+            - name: SONARR__AUTH__REQUIRED
+              value: DisabledForLocalAddresses
+            # Database: Defaults to SQLite (local file in /config). 
+            # To use PostgreSQL, uncomment and override these in your environment values:
+            # - name: SONARR__POSTGRES__HOST
+            #   value: "postgresql-host"
+            # - name: SONARR__POSTGRES__PORT
+            #   value: "5432"
+            # - name: SONARR__POSTGRES__USER
+            #   value: "sonarr"
+            # - name: SONARR__POSTGRES__MAINDB
+            #   value: "sonarr"
+            # - name: SONARR__POSTGRES__PASSWORD
+            #   valueFrom: { secretKeyRef: { name: sonarr-postgresql-secret, key: PASSWORD_SONARR } }
+            - name: SONARR__AUTH__APIKEY
+              valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
+
+    bazarr:
+      enabled: true
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: ghcr.io/hotio/bazarr
+            tag: release
+          probes:
+            liveness:
+              enabled: true
+              type: HTTP
+              path: /api/system/ping
+              port: 6767
+            readiness:
+              enabled: true
+              type: HTTP
+              path: /api/system/ping
+              port: 6767
+            startup:
+              enabled: true
+              type: HTTP
+              path: /api/system/ping
+              port: 6767
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+          env:
+            - name: HTTP_PROXY
+              value: ""
+            - name: HTTPS_PROXY
+              value: ""
+            - name: NO_PROXY
+              value: "localhost,127.0.0.1"
+            - name: BAZARR__AUTH__METHOD
+              value: "Forms"
+            - name: BAZARR__AUTH__REQUIRED
+              value: DisabledForLocalAddresses
+            # Database: Defaults to SQLite (local file in /config). 
+            # To use PostgreSQL, uncomment and override these in your environment values:
+            # - name: BAZARR__POSTGRES__HOST
+            #   value: "postgresql-host"
+            # - name: BAZARR__POSTGRES__PORT
+            #   value: "5432"
+            # - name: BAZARR__POSTGRES__USER
+            #   value: "bazarr"
+            # - name: BAZARR__POSTGRES__MAINDB
+            #   value: "bazarr"
+            # - name: BAZARR__POSTGRES__PASSWORD
+            #   valueFrom: { secretKeyRef: { name: bazarr-postgresql-secret, key: PASSWORD_BAZARR } }
+            - name: BAZARR__AUTH__APIKEY
+              valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
+        gluetun:
+          enabled: false
+          image:
+            repository: qmcgaw/gluetun
+            tag: latest
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          env: []
+
+  service:
+    flaresolverr:
+      controller: flaresolverr
+      ports:
+        http:
+          port: 8191
+    prowlarr:
+      controller: prowlarr
+      ports:
+        http:
+          port: 9696
+    radarr:
+      controller: radarr
+      ports:
+        http:
+          port: 7878
+    sonarr:
+      controller: sonarr
+      ports:
+        http:
+          port: 8989
+    bazarr:
+      controller: bazarr
+      ports:
+        http:
+          port: 6767
+
+  route:
+    prowlarr:
+      enabled: false
+      # parentRefs:
+      #   - name: my-gateway
+      #     namespace: gateway-system
+      # hostnames:
+      #   - prowlarr.internal.example.com
+    radarr:
+      enabled: false
+      # parentRefs:
+      #   - name: my-gateway
+      #     namespace: gateway-system
+      # hostnames:
+      #   - radarr.internal.example.com
+    sonarr:
+      enabled: false
+      # parentRefs:
+      #   - name: my-gateway
+      #     namespace: gateway-system
+      # hostnames:
+      #   - sonarr.internal.example.com
+    bazarr:
+      enabled: false
+      # parentRefs:
+      #   - name: my-gateway
+      #     namespace: gateway-system
+      # hostnames:
+      #   - bazarr.internal.example.com
+
+  persistence:
+    prowlarr-config:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: "local-path"
+      size: 1Gi
+      accessMode: ReadWriteOnce
+      advancedMounts:
+        prowlarr:
+          main:
+            - path: /config
+    radarr-config:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: "local-path"
+      size: 1Gi
+      accessMode: ReadWriteOnce
+      advancedMounts:
+        radarr:
+          main:
+            - path: /config
+    # radarr-media:
+    #   enabled: false
+    #   type: persistentVolumeClaim
+    #   existingClaim: "shared-media"
+    #   advancedMounts:
+    #     radarr:
+    #       main:
+    #         - path: /media
+    sonarr-config:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: "local-path"
+      size: 1Gi
+      accessMode: ReadWriteOnce
+      advancedMounts:
+        sonarr:
+          main:
+            - path: /config
+    # sonarr-media:
+    #   enabled: false
+    #   type: persistentVolumeClaim
+    #   existingClaim: "shared-media"
+    #   advancedMounts:
+    #     sonarr:
+    #       main:
+    #         - path: /media
+    bazarr-config:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: "local-path"
+      size: 1Gi
+      accessMode: ReadWriteOnce
+      advancedMounts:
+        bazarr:
+          main:
+            - path: /config
+    # bazarr-media:
+    #   enabled: false
+    #   type: persistentVolumeClaim
+    #   existingClaim: "shared-media"
+    #   advancedMounts:
+    #     bazarr:
+    #       main:
+    #         - path: /media
+
+provisioner:
+  enabled: false
+  podAnnotations: {}
+  # jellyfin:
+  #   adminSecretName: "jellyfin-admin-credentials"
+  #   serverHostname: "jellyfin.media-server.svc.cluster.local"
+  # downloadClient:
+  #   host: "qbittorrent.media-server.svc.cluster.local"
+  #   port: 8080
+  # seerr:
+  #   enabled: false
+  #   host: "seerr.media-server.svc.cluster.local"
+  #   port: 5055

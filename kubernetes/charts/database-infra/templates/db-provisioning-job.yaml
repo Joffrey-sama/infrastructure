@@ -1,0 +1,124 @@
+{{- if .Values.provisionDatabases.enabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-db-provisioning
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    metadata:
+      {{- with .Values.provisionDatabases.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.provisionDatabases.image | quote }}
+          command: ['sh', '-c']
+          args:
+            - |
+              until pg_isready -h {{ $.Values.provisionDatabases.postgresHost | default (printf "%s-postgresql" $.Release.Name) }} -U postgres; do
+                sleep 2
+              done
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-master-secret
+                  key: postgres-password
+        
+        - name: db-provisioner
+          image: {{ .Values.provisionDatabases.image | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "--- [PREPARATION] Generating provisioning script ---"
+              cat <<'EOF' > /tmp/provision.sh
+              #!/bin/sh
+              set -eu
+
+              echo "--- [START] Starting PostgreSQL provisioning ---"
+
+              {{- range .Values.provisionDatabases.databases }}
+              echo ""
+              echo ">> Configuring block for user: [{{ .user }}]"
+              USER="{{ .user }}"
+              VAR_NAME="PASSWORD_{{ .user | upper | replace "-" "_" }}"
+              
+              # Dynamic password retrieval
+              DB_PASSWORD=$(eval echo "\$$VAR_NAME")
+
+              if [ -z "$DB_PASSWORD" ]; then
+                echo "!! ERROR: Variable $VAR_NAME is empty. Check secret {{ .passwordSecretName }}"
+                exit 1
+              fi
+
+              # 1. User management
+              if ! psql -U postgres -tc "SELECT 1 FROM pg_user WHERE usename = '$USER'" | grep -q 1; then
+                echo "  + Creating user: $USER"
+                psql -U postgres -c "CREATE USER \"$USER\" WITH PASSWORD '$DB_PASSWORD';"
+              else
+                echo "  * User $USER already exists: Updating password"
+                psql -U postgres -c "ALTER USER \"$USER\" WITH PASSWORD '$DB_PASSWORD';"
+              fi
+
+              # 2. Database management
+              {{- range .databases }}
+              DB_NAME="{{ . }}"
+              echo "  -> Analyzing database: $DB_NAME"
+              
+              if ! psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1; then
+                echo "     [CREATE] Creating database $DB_NAME..."
+                psql -U postgres -c "CREATE DATABASE \"$DB_NAME\" OWNER \"$USER\";"
+              else
+                echo "     [SKIP] Database $DB_NAME already exists."
+              fi
+
+              echo "     [GRANT] Applying privileges on $DB_NAME for $USER"
+              psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"$DB_NAME\" TO \"$USER\";"
+              psql -U postgres -d "$DB_NAME" -c "GRANT ALL ON SCHEMA public TO \"$USER\";"
+              {{- end }}
+              {{- end }}
+
+              echo ""
+              echo "--- [FINISH] Provisioning completed successfully ---"
+              EOF
+              chmod +x /tmp/provision.sh
+          volumeMounts:
+            - name: scripts
+              mountPath: /tmp
+      
+      containers:
+        - name: run-provisioner
+          image: {{ .Values.provisionDatabases.image | quote }}
+          command: ["/tmp/provision.sh"]
+          env:
+            - name: PGHOST
+              value: {{ .Values.provisionDatabases.postgresHost | default (printf "%s-postgresql" .Release.Name) | quote }}
+            - name: PGUSER
+              value: "postgres"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-master-secret
+                  key: postgres-password
+          envFrom:
+          {{- range .Values.provisionDatabases.databases }}
+            - secretRef:
+                name: {{ .passwordSecretName }}
+          {{- end }}
+          volumeMounts:
+            - name: scripts
+              mountPath: /tmp
+      volumes:
+        - name: scripts
+          emptyDir: {}
+{{- end }}

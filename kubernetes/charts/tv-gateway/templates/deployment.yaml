@@ -1,0 +1,120 @@
+{{- range .Values.iptv_instances }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-threadfin-{{ .name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $.Release.Name }}-threadfin-{{ .name }}
+  template:
+    metadata:
+      {{- if or $.Values.podAnnotations .podAnnotations }}
+      annotations:
+        {{- if $.Values.podAnnotations }}
+        {{- toYaml $.Values.podAnnotations | nindent 8 }}
+        {{- end }}
+        {{- if .podAnnotations }}
+        {{- toYaml .podAnnotations | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels:
+        app: {{ $.Release.Name }}-threadfin-{{ .name }}
+    spec:
+      containers:
+        - name: gluetun
+          image: qmcgaw/gluetun:latest
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          env:
+            {{- range $k, $v := $.Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            - name: VPN_SERVICE_PROVIDER
+              value: "airvpn"
+            - name: VPN_TYPE
+              value: "wireguard"
+            - name: SERVER_COUNTRIES
+              value: {{ .country | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef: {name: wireguard-conf-secret, key: privateKey}
+            - name: WIREGUARD_PRESHARED_KEY
+              valueFrom:
+                secretKeyRef: {name: wireguard-conf-secret, key: presharedKey}
+            - name: WIREGUARD_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef: {name: wireguard-conf-secret, key: publicKey}
+            - name: WIREGUARD_MTU
+              value: "1280"
+            - name: DNS_BLOCK_ADS
+              value: "off"
+            - name: DNS_BLOCK_MALICIOUS
+              value: "off"
+            - name: DNS_UPSTREAM_PLAIN_ADDRESSES
+              value: "1.1.1.1:53"
+            - name: HEALTH_TARGET_ADDRESSES
+              value: "1.1.1.1:443"
+            - name: DOTRP_LOCAL_NETWORK
+              value: {{ $.Values.gluetun.localNetwork | quote }}
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: {{ $.Values.gluetun.outboundSubnets | quote }}
+            - name: FIREWALL_VPN_INPUT_PORTS
+              value: "34400"
+            - name: FIREWALL_INPUT_PORTS
+              value: "34400"
+        - name: threadfin
+          image: fyb3roptik/threadfin:latest
+          env:
+            - name: THREADFIN_BIND
+              value: "0.0.0.0"
+            - name: THREADFIN_PORT
+              value: "34400"
+            - name: THREADFIN_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - containerPort: 34400
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 34400
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 34400
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /home/threadfin/.threadfin/conf/ # Aligned with the -config flag argument
+      initContainers:
+        - name: init-config
+          image: fyb3roptik/threadfin:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              mkdir -p /home/threadfin/conf
+              if [ ! -f /home/threadfin/conf/settings.json ]; then
+                cp /tmp/threadfin-config/settings.json /home/threadfin/conf/settings.json
+              fi
+          volumeMounts:
+            - name: config
+              mountPath: /home/threadfin/conf/
+            - name: settings-template
+              mountPath: /tmp/threadfin-config/
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ $.Release.Name }}-threadfin-{{ .name }}-config
+        - name: settings-template
+          configMap:
+            name: {{ $.Release.Name }}-threadfin-config-{{ .name }}
+{{- end }}

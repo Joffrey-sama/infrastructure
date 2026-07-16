@@ -1,0 +1,5 @@
+apiVersion: v2
+name: vpn-gateway
+description: A Helm chart for Gluetun and VPN Gateway with Headscale
+type: application
+version: 0.4.0
