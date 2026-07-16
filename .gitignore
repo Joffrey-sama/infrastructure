@@ -8,6 +8,15 @@
 *.pfx
 *.p12
 
+# Local tests and debug
+**/*test*
+**/test-*.yaml
+**/test-*.yml
+**/test-oidc.yaml
+**/*.tfplan
+
+
+
 # Terraform State and Variables
 *.tfvars
 *.tfvars.json
