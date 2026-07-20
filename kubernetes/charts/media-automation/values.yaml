@@ -16,7 +16,7 @@ main:
         init-cross-seed:
           image:
             repository: docker.io/library/busybox
-            tag: latest
+            tag: 1.36.1
           command:
             [
               "sh",
@@ -27,7 +27,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/qbittorrent
-            tag: release
+            tag: release-4.6.5
           resources:
             requests: { cpu: "200m", memory: "512Mi" }
             limits: { cpu: "2", memory: "2Gi" }
@@ -54,7 +54,7 @@ main:
           enabled: false
           image:
             repository: qmcgaw/gluetun
-            tag: latest
+            tag: v3.41.1
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
@@ -106,14 +106,15 @@ main:
         init-config:
           image:
             repository: docker.io/library/busybox
-            tag: latest
+            tag: 1.36.1
           command:
             ["sh", "-c", "cp /tmp/sabnzbd-ini/sabnzbd.ini /config/sabnzbd.ini"]
       containers:
         main:
           image:
             repository: ghcr.io/hotio/sabnzbd
-            tag: release
+            tag: release-4.3.2
+
           env:
             - name: SABNZBD__HOST_WHITELIST
               value: "usenet.internal.example.com"

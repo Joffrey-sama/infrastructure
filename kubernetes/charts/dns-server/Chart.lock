@@ -1,6 +1,0 @@
-dependencies:
-- name: adguard-home
-  repository: https://gabe565.github.io/charts
-  version: 0.3.25
-digest: sha256:866507b4b61b7f51d6bd4eed9ca54de7e5421bd29ae115c43546c79381c8094f
-generated: "2026-01-04T16:47:54.452261861+01:00"

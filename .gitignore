@@ -26,11 +26,17 @@
 .terraform.lock.hcl
 crash.log
 
-# Kubernetes manifests and logs
+# Kubernetes manifests, logs and downloaded Helm dependencies
 *.log
 kubeconfig
 kubeconfig.yaml
 *kubeconfig*
+kubernetes/charts/*/charts/
+kubernetes/charts/*/*.tgz
+Chart.lock
+*.lock.hcl
+
+
 
 # OS files
 .DS_Store
