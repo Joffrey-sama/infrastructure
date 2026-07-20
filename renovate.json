@@ -5,7 +5,8 @@
     ":preserveSemverRanges",
     ":semanticCommits"
   ],
-  "dependencyDashboardApproval": false,
+  "silent": false,
+  "dependencyDashboard": true,
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
