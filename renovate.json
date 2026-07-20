@@ -6,6 +6,7 @@
     ":semanticCommits"
   ],
   "mode": "full",
+  "bumpVersion": "patch",
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
