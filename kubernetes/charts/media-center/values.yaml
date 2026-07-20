@@ -10,9 +10,6 @@ global:
 # ==============================================================================
 jellyfin:
   enabled: true
-  image:
-    repository: docker.io/jellyfin/jellyfin
-    tag: 10.11.8
   volumes:
     - name: gpu-device
       hostPath:
