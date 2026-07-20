@@ -11,12 +11,12 @@ headscale:
     repository: headscale/headscale
     tag: 0.28.0
     pullPolicy: IfNotPresent
-  
+
   publicUrl: "https://headscale.delva-home.fr"
 
   dns:
     domain: "vpn.delva-home.fr"
-  
+
   # OIDC Configuration (Authentik)
   oidc:
     enabled: true
@@ -48,7 +48,7 @@ headscaleui:
   podAnnotations: {}
   image:
     repository: ghcr.io/gurucomputing/headscale-ui
-    tag: latest
+    tag: 2026.03.17
   service:
     port: 80
   httproute:

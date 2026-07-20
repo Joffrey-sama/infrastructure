@@ -12,7 +12,7 @@ jellyfin:
   enabled: true
   image:
     repository: docker.io/jellyfin/jellyfin
-    tag: ""
+    tag: 10.11.8
   volumes:
     - name: gpu-device
       hostPath:
@@ -30,7 +30,7 @@ jellyfin:
       cpu: 150m
       memory: 256Mi
     limits:
-      cpu: "2000m" 
+      cpu: "2000m"
       memory: "2Gi"
   # User and group configuration IDs for the Jellyfin container
   podSecurityContext:
@@ -47,7 +47,7 @@ jellyfin:
     readOnlyRootFilesystem: false
 
   persistence:
-    config: 
+    config:
       enabled: true
       storageClass: ""
       size: 10Gi
@@ -61,13 +61,13 @@ jellyfin:
       type: pvc
       storageClass: ""
       size: 10Gi
-  
+
   env:
     - name: JELLYFIN_FFMPEG_OPT_DISABLE_VAAPI_DRM_MODIFIERS
       value: "1"
     - name: LIBVA_DRIVER_NAME
       value: "iHD"
-  
+
   metrics:
     enabled: true
     serviceMonitor:
