@@ -1,0 +1,65 @@
+name: "Ansible Provision (Reusable)"
+
+on:
+  workflow_call:
+    inputs:
+      playbook_path:
+        description: "Path to the playbook file to run"
+        required: true
+        type: string
+      inventory_path:
+        description: "Path to the Ansible inventory file"
+        required: true
+        type: string
+      tags:
+        description: "Optional comma-separated list of tags to run"
+        required: false
+        type: string
+        default: ""
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
+      ANSIBLE_VAULT_PASSWORD:
+        required: true
+
+jobs:
+  ansible:
+    name: "Ansible Playbook Run"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: "Install Ansible"
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: "Setup SSH Key"
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: "Run Ansible Playbook"
+        run: |
+          # Write vault password to a secure temporary file
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_pass
+          
+          # Build ansible command
+          CMD="ansible-playbook -i ${{ inputs.inventory_path }} ${{ inputs.playbook_path }} --vault-password-file=.vault_pass"
+          
+          # Add tags if specified
+          if [ -n "${{ inputs.tags }}" ]; then
+            CMD="$CMD --tags ${{ inputs.tags }}"
+          fi
+          
+          # Execute
+          eval $CMD
+          
+          # Securely cleanup vault password file
+          rm -f .vault_pass

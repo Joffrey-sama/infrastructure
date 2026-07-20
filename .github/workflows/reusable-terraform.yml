@@ -1,0 +1,115 @@
+name: "Terraform Deploy (Reusable)"
+
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: "The directory containing the Terraform configuration to run"
+        required: true
+        type: string
+      tfvars_file_path:
+        description: "Path to the tfvars file to pass to Terraform commands"
+        required: true
+        type: string
+      apply:
+        description: "Whether to apply the Terraform plan"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      OCI_API_PRIVATE_KEY:
+        required: false
+      OCI_API_KEY_FINGERPRINT:
+        required: false
+      OCI_TENANCY_OCID:
+        required: false
+      OCI_USER_OCID:
+        required: false
+      OCI_REGION:
+        required: false
+      AUTHENTIK_TOKEN:
+        required: false
+      GRAFANA_API_TOKEN:
+        required: false
+      TF_VAR_ldap_bind_password:
+        required: false
+      TF_VAR_grafana_client_secret:
+        required: false
+      TF_VAR_headscale_client_secret:
+        required: false
+      TF_VAR_headlamp_client_secret:
+        required: false
+      TF_VAR_homarr_client_secret:
+        required: false
+
+jobs:
+  terraform:
+    name: "Terraform Run"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: "Terraform Format check"
+        working-directory: ${{ inputs.directory }}
+        run: terraform fmt -check
+
+      - name: "Terraform Init"
+        working-directory: ${{ inputs.directory }}
+        run: terraform init
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_USER_OCID }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_API_KEY_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_API_PRIVATE_KEY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
+
+      - name: "Terraform Validate"
+        working-directory: ${{ inputs.directory }}
+        run: terraform validate
+
+      - name: "Terraform Plan"
+        working-directory: ${{ inputs.directory }}
+        run: |
+          terraform plan \
+            -var-file="${{ inputs.tfvars_file_path }}" \
+            -out=tfplan
+        env:
+          # OCI connection credentials
+          OCI_CLI_USER: ${{ secrets.OCI_USER_OCID }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_API_KEY_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_API_PRIVATE_KEY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
+          # Provider tokens mapping
+          TF_VAR_authentik_token: ${{ secrets.AUTHENTIK_TOKEN }}
+          TF_VAR_grafana_api_token: ${{ secrets.GRAFANA_API_TOKEN }}
+          # Sensitives variables mapping
+          TF_VAR_ldap_bind_password: ${{ secrets.TF_VAR_ldap_bind_password }}
+          TF_VAR_grafana_client_secret: ${{ secrets.TF_VAR_grafana_client_secret }}
+          TF_VAR_headscale_client_secret: ${{ secrets.TF_VAR_headscale_client_secret }}
+          TF_VAR_headlamp_client_secret: ${{ secrets.TF_VAR_headlamp_client_secret }}
+          TF_VAR_homarr_client_secret: ${{ secrets.TF_VAR_homarr_client_secret }}
+
+      - name: "Terraform Apply"
+        if: ${{ inputs.apply == true }}
+        working-directory: ${{ inputs.directory }}
+        run: terraform apply -auto-approve tfplan
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_USER_OCID }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_API_KEY_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_API_PRIVATE_KEY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
+          TF_VAR_authentik_token: ${{ secrets.AUTHENTIK_TOKEN }}
+          TF_VAR_grafana_api_token: ${{ secrets.GRAFANA_API_TOKEN }}
+          TF_VAR_ldap_bind_password: ${{ secrets.TF_VAR_ldap_bind_password }}
+          TF_VAR_grafana_client_secret: ${{ secrets.TF_VAR_grafana_client_secret }}
+          TF_VAR_headscale_client_secret: ${{ secrets.TF_VAR_headscale_client_secret }}
+          TF_VAR_headlamp_client_secret: ${{ secrets.TF_VAR_headlamp_client_secret }}
+          TF_VAR_homarr_client_secret: ${{ secrets.TF_VAR_homarr_client_secret }}
