@@ -51,6 +51,8 @@ jobs:
           pip install ansible ansible-lint
 
       - name: "Ansible Syntax Check & Lint"
+        env:
+          ANSIBLE_ROLES_PATH: "ansible/server-config/roles"
         run: |
           for pb in $(find ansible -name "*.yml" -o -name "*.yaml" | grep -v "group_vars" | grep -v "host_vars" | grep -v "roles"); do
             echo "=== Checking playbook: ${pb} ==="
