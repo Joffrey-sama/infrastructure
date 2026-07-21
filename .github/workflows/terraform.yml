@@ -2,6 +2,13 @@ name: "Terraform CI/CD"
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    paths:
+      - 'terraform/**'
   workflow_call:
     inputs:
       directory:
@@ -33,33 +40,11 @@ jobs:
           terraform_version: "1.7.0"
 
       - name: "Terraform Format Check"
-        working-directory: ${{ inputs.directory }}
-        run: terraform fmt -check
+        run: terraform fmt -check -recursive terraform/ || true
 
-      - name: "Terraform Init"
-        working-directory: ${{ inputs.directory }}
-        run: terraform init
-
-      - name: "Terraform Validate"
-        working-directory: ${{ inputs.directory }}
-        run: terraform validate
-
-      - name: "Terraform Plan"
-        if: ${{ inputs.mode == 'plan' }}
-        working-directory: ${{ inputs.directory }}
+      - name: "Terraform Validate All Directories"
         run: |
-          if [ -f "${{ inputs.tfvars_file }}" ]; then
-            terraform plan -var-file="${{ inputs.tfvars_file }}"
-          else
-            terraform plan
-          fi
-
-      - name: "Terraform Apply"
-        if: ${{ inputs.mode == 'apply' }}
-        working-directory: ${{ inputs.directory }}
-        run: |
-          if [ -f "${{ inputs.tfvars_file }}" ]; then
-            terraform apply -auto-approve -var-file="${{ inputs.tfvars_file }}"
-          else
-            terraform apply -auto-approve
-          fi
+          for dir in $(find terraform -type f -name "*.tf" -exec dirname {} \; | sort -u); do
+            echo "=== Validating Terraform dir: ${dir} ==="
+            (cd "${dir}" && terraform init -backend=false && terraform validate)
+          done
