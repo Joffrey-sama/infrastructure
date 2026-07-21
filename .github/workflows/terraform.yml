@@ -1,0 +1,64 @@
+name: "Terraform CI/CD"
+
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: "Directory containing Terraform configuration"
+        required: true
+        type: string
+      tfvars_file:
+        description: "Path to tfvars file relative to directory"
+        required: false
+        type: string
+        default: "prod.tfvars"
+      mode:
+        description: "Execution mode: 'plan' or 'apply'"
+        required: false
+        type: string
+        default: "plan"
+
+jobs:
+  terraform:
+    name: "Terraform Execution (${{ inputs.mode }})"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: "Terraform Format Check"
+        working-directory: ${{ inputs.directory }}
+        run: terraform fmt -check
+
+      - name: "Terraform Init"
+        working-directory: ${{ inputs.directory }}
+        run: terraform init
+
+      - name: "Terraform Validate"
+        working-directory: ${{ inputs.directory }}
+        run: terraform validate
+
+      - name: "Terraform Plan"
+        if: ${{ inputs.mode == 'plan' }}
+        working-directory: ${{ inputs.directory }}
+        run: |
+          if [ -f "${{ inputs.tfvars_file }}" ]; then
+            terraform plan -var-file="${{ inputs.tfvars_file }}"
+          else
+            terraform plan
+          fi
+
+      - name: "Terraform Apply"
+        if: ${{ inputs.mode == 'apply' }}
+        working-directory: ${{ inputs.directory }}
+        run: |
+          if [ -f "${{ inputs.tfvars_file }}" ]; then
+            terraform apply -auto-approve -var-file="${{ inputs.tfvars_file }}"
+          else
+            terraform apply -auto-approve
+          fi

@@ -1,0 +1,31 @@
+name: "Helm CI/CD"
+
+on:
+  workflow_call:
+    inputs:
+      chart_dir:
+        description: "Path to Helm chart directory"
+        required: true
+        type: string
+
+jobs:
+  helm:
+    name: "Helm Lint & Render"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Helm"
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0'
+
+      - name: "Build Dependencies"
+        run: helm dependency build "${{ inputs.chart_dir }}" || true
+
+      - name: "Helm Lint"
+        run: helm lint "${{ inputs.chart_dir }}"
+
+      - name: "Helm Template Render Check"
+        run: helm template test-release "${{ inputs.chart_dir }}" > /dev/null
