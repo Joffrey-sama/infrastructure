@@ -34,7 +34,7 @@ resource "oci_core_route_table" "k8s_rt" {
   }
 
   route_rules {
-    destination       = "${var.onprem_nodes_cidr}"
+    destination       = var.onprem_nodes_cidr
     destination_type  = "CIDR_BLOCK"
     network_entity_id = oci_core_drg.vpn_drg.id
   }
@@ -133,7 +133,7 @@ resource "oci_core_security_list" "k8s_sl" {
 
   ingress_security_rules {
     protocol    = "all"
-    source      = "${var.onprem_nodes_cidr}"
+    source      = var.onprem_nodes_cidr
     description = "Allow On-Premise Nodes Traffic"
   }
 }
@@ -168,11 +168,11 @@ resource "oci_core_ipsec" "vpn_connection" {
 }
 
 resource "oci_core_ipsec_connection_tunnel_management" "vpn_tunnel_1" {
-  ipsec_id    = oci_core_ipsec.vpn_connection.id
-  tunnel_id   = data.oci_core_ipsec_connection_tunnels.vpn_tunnels.ip_sec_connection_tunnels[0].id
-  
+  ipsec_id  = oci_core_ipsec.vpn_connection.id
+  tunnel_id = data.oci_core_ipsec_connection_tunnels.vpn_tunnels.ip_sec_connection_tunnels[0].id
+
   # POLICY-BASED ROUTING: Required to manage multiple encryption domains
-  routing     = "POLICY" 
+  routing     = "POLICY"
   ike_version = "V2"
 
   nat_translation_enabled = "ENABLED"

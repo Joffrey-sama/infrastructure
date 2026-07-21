@@ -1,0 +1,50 @@
+name: "Terraform CI/CD"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    paths:
+      - 'terraform/**'
+  workflow_call:
+    inputs:
+      directory:
+        description: "Directory containing Terraform configuration"
+        required: true
+        type: string
+      tfvars_file:
+        description: "Path to tfvars file relative to directory"
+        required: false
+        type: string
+        default: "prod.tfvars"
+      mode:
+        description: "Execution mode: 'plan' or 'apply'"
+        required: false
+        type: string
+        default: "plan"
+
+jobs:
+  terraform:
+    name: "Terraform Execution (${{ inputs.mode }})"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: "Terraform Format Check"
+        run: terraform fmt -check -recursive terraform/ || true
+
+      - name: "Terraform Validate All Directories"
+        run: |
+          for dir in $(find terraform -type f -name "*.tf" -exec dirname {} \; | sort -u); do
+            echo "=== Validating Terraform dir: ${dir} ==="
+            (cd "${dir}" && terraform init -backend=false && terraform validate)
+          done

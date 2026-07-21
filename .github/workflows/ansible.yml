@@ -1,0 +1,65 @@
+name: "Ansible CI/CD"
+
+on:
+  workflow_call:
+    inputs:
+      playbook:
+        description: "Path to Ansible playbook file in infrastructure repository"
+        required: true
+        type: string
+      inventory:
+        description: "Path to Ansible inventory file in delva-home-ops repository"
+        required: false
+        type: string
+        default: "ansible/inventory/hosts.yml"
+      mode:
+        description: "Execution mode: 'check' or 'execute'"
+        required: false
+        type: string
+        default: "check"
+
+jobs:
+  ansible:
+    name: "Ansible Execution (${{ inputs.mode }})"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout delva-home-ops (Inventory & Vars)"
+        uses: actions/checkout@v4
+        with:
+          path: "ops"
+
+      - name: "Checkout infrastructure (Playbooks & Roles)"
+        uses: actions/checkout@v4
+        with:
+          repository: "Joffrey-sama/infrastructure"
+          ref: "feature/ci-reusable-workflows"
+          path: "infra"
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: "Install Ansible"
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible ansible-lint
+
+      - name: "Setup SSH Key"
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: "Ansible Syntax Check"
+        run: |
+          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }} --syntax-check
+
+      - name: "Ansible Check (Dry Run)"
+        if: ${{ inputs.mode == 'check' }}
+        run: |
+          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }} --check --diff
+
+      - name: "Ansible Execute"
+        if: ${{ inputs.mode == 'execute' }}
+        run: |
+          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }}
