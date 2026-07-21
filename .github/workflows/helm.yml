@@ -1,6 +1,20 @@
 name: "Helm CI/CD"
 
 on:
+  workflow_dispatch:
+    inputs:
+      chart_dir:
+        description: "Path to Helm chart directory (leave empty to test all charts)"
+        required: false
+        type: string
+        default: ""
+  push:
+    paths:
+      - 'kubernetes/charts/**'
+      - '.github/workflows/helm.yml'
+  pull_request:
+    paths:
+      - 'kubernetes/charts/**'
   workflow_call:
     inputs:
       chart_dir:
@@ -21,11 +35,21 @@ jobs:
         with:
           version: 'v3.14.0'
 
-      - name: "Build Dependencies"
-        run: helm dependency build "${{ inputs.chart_dir }}" || true
-
-      - name: "Helm Lint"
-        run: helm lint "${{ inputs.chart_dir }}"
-
-      - name: "Helm Template Render Check"
-        run: helm template test-release "${{ inputs.chart_dir }}" > /dev/null
+      - name: "Lint & Template Charts"
+        run: |
+          TARGET_DIR="${{ inputs.chart_dir }}"
+          if [ -n "$TARGET_DIR" ]; then
+            echo "=== Linting chart: ${TARGET_DIR} ==="
+            helm dependency build "${TARGET_DIR}" || true
+            helm lint "${TARGET_DIR}"
+            helm template test-release "${TARGET_DIR}" > /dev/null
+          else
+            for chart in kubernetes/charts/*/; do
+              if [ -f "${chart}Chart.yaml" ]; then
+                echo "=== Linting chart: ${chart} ==="
+                helm dependency build "${chart}" || true
+                helm lint "${chart}"
+                helm template test-release "${chart}" > /dev/null
+              fi
+            done
+          fi
