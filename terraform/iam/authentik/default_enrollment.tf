@@ -66,7 +66,7 @@ resource "authentik_stage_prompt_field" "password_repeat" {
 }
 
 resource "authentik_stage_prompt" "default_enrollment_prompt" {
-  name   = "default-prompt"
+  name = "default-prompt"
   fields = [
     authentik_stage_prompt_field.username.id,
     authentik_stage_prompt_field.name.id,

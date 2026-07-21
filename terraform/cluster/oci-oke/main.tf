@@ -13,9 +13,9 @@ provider "oci" {
 }
 
 locals {
-  node_pool_target_version = var.kubernetes_version # Node Pool must target the version defined in var.kubernetes_version
-  k8s_version_short = trimprefix(local.node_pool_target_version, "v") # Image version must match the Node Pool version
-  oke_image_id = [ # This logic guarantees that the correct image is selected
+  node_pool_target_version = var.kubernetes_version                          # Node Pool must target the version defined in var.kubernetes_version
+  k8s_version_short        = trimprefix(local.node_pool_target_version, "v") # Image version must match the Node Pool version
+  oke_image_id = [                                                           # This logic guarantees that the correct image is selected
     for source in data.oci_containerengine_node_pool_option.node_pool_option.sources : source.image_id
     if strcontains(source.source_name, "aarch64") && strcontains(source.source_name, local.k8s_version_short)
   ][0]
