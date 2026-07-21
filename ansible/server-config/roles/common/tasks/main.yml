@@ -20,6 +20,14 @@
     validate: 'visudo -cf %s' # Validate syntax before writing
   when: ansible_become_method == 'sudo' # Only apply if using sudo
 
+- name: Ensure authorized SSH keys are present
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    state: present
+    key: "{{ item }}"
+  loop: "{{ authorized_ssh_keys | default([]) }}"
+
+
 - name: Enable and manage ufw
   community.general.ufw:
     state: enabled
