@@ -18,6 +18,22 @@
         "digest"
       ],
       "automerge": false
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["renovate", "github-actions"]
+    },
+    {
+      "matchManagers": ["helm-values", "helm-v3", "helmfile"],
+      "addLabels": ["renovate", "helm"]
+    },
+    {
+      "matchManagers": ["terraform", "terraform-vars"],
+      "addLabels": ["renovate", "terraform"]
+    },
+    {
+      "matchManagers": ["ansible"],
+      "addLabels": ["renovate", "ansible"]
     }
   ]
 }
