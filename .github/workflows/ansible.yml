@@ -4,14 +4,14 @@ on:
   workflow_call:
     inputs:
       playbook:
-        description: "Path to Ansible playbook file"
+        description: "Path to Ansible playbook file in infrastructure repository"
         required: true
         type: string
       inventory:
-        description: "Path to Ansible inventory file"
+        description: "Path to Ansible inventory file in delva-home-ops repository"
         required: false
         type: string
-        default: "inventory/hosts.ini"
+        default: "ansible/inventory/hosts.yml"
       mode:
         description: "Execution mode: 'check' or 'execute'"
         required: false
@@ -23,8 +23,17 @@ jobs:
     name: "Ansible Execution (${{ inputs.mode }})"
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout Code"
+      - name: "Checkout delva-home-ops (Inventory & Vars)"
         uses: actions/checkout@v4
+        with:
+          path: "ops"
+
+      - name: "Checkout infrastructure (Playbooks & Roles)"
+        uses: actions/checkout@v4
+        with:
+          repository: "Joffrey-sama/infrastructure"
+          ref: "feature/ci-reusable-workflows"
+          path: "infra"
 
       - name: "Setup Python"
         uses: actions/setup-python@v5
@@ -37,18 +46,20 @@ jobs:
           pip install ansible ansible-lint
 
       - name: "Setup SSH Key"
-        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: "Ansible Syntax Check"
-        run: ansible-playbook -i "${{ inputs.inventory }}" "${{ inputs.playbook }}" --syntax-check
+        run: |
+          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }} --syntax-check
 
       - name: "Ansible Check (Dry Run)"
         if: ${{ inputs.mode == 'check' }}
-        run: ansible-playbook -i "${{ inputs.inventory }}" "${{ inputs.playbook }}" --check --diff
+        run: |
+          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }} --check --diff
 
       - name: "Ansible Execute"
         if: ${{ inputs.mode == 'execute' }}
-        run: ansible-playbook -i "${{ inputs.inventory }}" "${{ inputs.playbook }}"
+        run: |
+          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }}
