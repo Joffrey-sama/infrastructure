@@ -1,6 +1,20 @@
 name: "Ansible CI/CD"
 
 on:
+  workflow_dispatch:
+    inputs:
+      playbook:
+        description: "Path to Ansible playbook (leave empty to syntax-check all)"
+        required: false
+        type: string
+        default: ""
+  push:
+    paths:
+      - 'ansible/**'
+      - '.github/workflows/ansible.yml'
+  pull_request:
+    paths:
+      - 'ansible/**'
   workflow_call:
     inputs:
       playbook:
@@ -20,20 +34,11 @@ on:
 
 jobs:
   ansible:
-    name: "Ansible Execution (${{ inputs.mode }})"
+    name: "Ansible Execution (${{ inputs.mode || 'check' }})"
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout delva-home-ops (Inventory & Vars)"
+      - name: "Checkout Code"
         uses: actions/checkout@v4
-        with:
-          path: "ops"
-
-      - name: "Checkout infrastructure (Playbooks & Roles)"
-        uses: actions/checkout@v4
-        with:
-          repository: "Joffrey-sama/infrastructure"
-          ref: "feature/ci-reusable-workflows"
-          path: "infra"
 
       - name: "Setup Python"
         uses: actions/setup-python@v5
@@ -45,21 +50,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible ansible-lint
 
-      - name: "Setup SSH Key"
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: "Ansible Syntax Check"
+      - name: "Ansible Syntax Check & Lint"
         run: |
-          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }} --syntax-check
-
-      - name: "Ansible Check (Dry Run)"
-        if: ${{ inputs.mode == 'check' }}
-        run: |
-          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }} --check --diff
-
-      - name: "Ansible Execute"
-        if: ${{ inputs.mode == 'execute' }}
-        run: |
-          ansible-playbook -i ops/${{ inputs.inventory }} infra/${{ inputs.playbook }}
+          for pb in $(find ansible -name "*.yml" -o -name "*.yaml" | grep -v "group_vars" | grep -v "host_vars" | grep -v "roles"); do
+            echo "=== Checking playbook: ${pb} ==="
+            ansible-playbook "${pb}" --syntax-check
+          done

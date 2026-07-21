@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'terraform/**'
-      - '.github/workflows/terraform.yml'
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
   pull_request:
     paths:
-      - 'terraform/**'
+      - "terraform/**"
   workflow_call:
     inputs:
       directory:

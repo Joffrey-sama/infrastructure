@@ -10,11 +10,11 @@ on:
         default: ""
   push:
     paths:
-      - 'kubernetes/charts/**'
-      - '.github/workflows/helm.yml'
+      - "kubernetes/charts/**"
+      - ".github/workflows/helm.yml"
   pull_request:
     paths:
-      - 'kubernetes/charts/**'
+      - "kubernetes/charts/**"
   workflow_call:
     inputs:
       chart_dir:
@@ -33,7 +33,7 @@ jobs:
       - name: "Setup Helm"
         uses: azure/setup-helm@v4
         with:
-          version: 'v3.14.0'
+          version: "v3.14.0"
 
       - name: "Lint & Template Charts"
         run: |
