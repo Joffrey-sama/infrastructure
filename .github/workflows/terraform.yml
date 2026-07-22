@@ -56,7 +56,7 @@ jobs:
       - name: "Terraform Validate & TFLint All Modules"
         run: |
           tflint --init || true
-          for dir in $(find terraform/modules -mindepth 1 -maxdepth 1 -type d); do
+          find terraform/modules -mindepth 1 -maxdepth 1 -type d | while read -r dir; do
             echo "=== Validating & Linting Terraform module: ${dir} ==="
             (cd "${dir}" && terraform init -backend=false && terraform validate && tflint)
           done
@@ -68,12 +68,12 @@ jobs:
           git fetch origin main:main || true
 
           FORK_POINT=$(git merge-base origin/main HEAD)
-          MODIFIED_FILES=$(git diff --name-only $FORK_POINT HEAD)
+          MODIFIED_FILES=$(git diff --name-only "$FORK_POINT" HEAD)
 
           for mod_dir in terraform/modules/*/; do
             if [ -f "${mod_dir}VERSION" ]; then
               MOD_NAME=$(basename "${mod_dir}")
-              MOD_VERSION=$(cat "${mod_dir}VERSION" | tr -d ' \n\r')
+              MOD_VERSION=$(tr -d ' \n\r' < "${mod_dir}VERSION")
               TAG_NAME="tf-${MOD_NAME}-${MOD_VERSION}"
 
               if echo "$MODIFIED_FILES" | grep -q "^${mod_dir}"; then
@@ -98,7 +98,7 @@ jobs:
           for mod_dir in terraform/modules/*/; do
             if [ -f "${mod_dir}VERSION" ]; then
               MOD_NAME=$(basename "${mod_dir}")
-              MOD_VERSION=$(cat "${mod_dir}VERSION" | tr -d ' \n\r')
+              MOD_VERSION=$(tr -d ' \n\r' < "${mod_dir}VERSION")
               TAG_NAME="tf-${MOD_NAME}-${MOD_VERSION}"
 
               if echo "$MODIFIED_FILES" | grep -q "^${mod_dir}"; then

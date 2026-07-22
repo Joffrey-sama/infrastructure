@@ -58,9 +58,9 @@ jobs:
 
       - name: "Ansible Syntax Check"
         env:
-          ANSIBLE_ROLES_PATH: "ansible/roles:ansible/server-config/roles"
+          ANSIBLE_ROLES_PATH: "ansible/roles"
         run: |
-          for pb in $(find ansible -name "*.yml" -o -name "*.yaml" | grep -v "galaxy.yml" | grep -v "group_vars" | grep -v "host_vars" | grep -v "roles/"); do
+          for pb in $(find ansible/playbooks -name "*.yml" -o -name "*.yaml"); do
             echo "=== Syntax checking playbook: ${pb} ==="
             ansible-playbook "${pb}" --syntax-check || true
           done
@@ -77,7 +77,7 @@ jobs:
           git fetch origin main:main || true
 
           FORK_POINT=$(git merge-base origin/main HEAD)
-          MODIFIED_FILES=$(git diff --name-only $FORK_POINT HEAD)
+          MODIFIED_FILES=$(git diff --name-only "$FORK_POINT" HEAD)
 
           if echo "$MODIFIED_FILES" | grep -q "^ansible/"; then
             COLLECTION_VERSION=$(yq e '.version' ansible/galaxy.yml)
@@ -139,7 +139,7 @@ jobs:
 
       - name: "Ansible Execution (${{ inputs.mode || 'check' }})"
         env:
-          ANSIBLE_ROLES_PATH: "ansible/roles:ansible/server-config/roles"
+          ANSIBLE_ROLES_PATH: "ansible/roles"
         run: |
           PLAYBOOK="${{ inputs.playbook }}"
           MODE="${{ inputs.mode || 'check' }}"

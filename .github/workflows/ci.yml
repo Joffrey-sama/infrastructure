@@ -38,10 +38,10 @@ jobs:
           git fetch origin main:main || true
 
           FORK_POINT=$(git merge-base origin/main HEAD)
-          MODIFIED_FILES=$(git diff --name-only $FORK_POINT HEAD)
+          MODIFIED_FILES=$(git diff --name-only "$FORK_POINT" HEAD)
 
           if echo "$MODIFIED_FILES" | grep -q "^\.github/workflows/"; then
-            WF_VERSION=$(cat .github/workflows/VERSION | tr -d ' \n\r')
+            WF_VERSION=$(tr -d ' \n\r' < .github/workflows/VERSION)
             TAG_NAME="workflow-v${WF_VERSION}"
 
             echo "Workflows modified. Target tag: ${TAG_NAME}"
@@ -71,7 +71,7 @@ jobs:
           MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
 
           if echo "$MODIFIED_FILES" | grep -q "^\.github/workflows/"; then
-            WF_VERSION=$(cat .github/workflows/VERSION | tr -d ' \n\r')
+            WF_VERSION=$(tr -d ' \n\r' < .github/workflows/VERSION)
             TAG_NAME="workflow-v${WF_VERSION}"
 
             echo "Publishing Workflows Release v${WF_VERSION} -> Tag: ${TAG_NAME}"

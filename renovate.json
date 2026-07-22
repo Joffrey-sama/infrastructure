@@ -37,10 +37,9 @@
       "addLabels": ["renovate", "ansible"],
       "postUpgradeTasks": {
         "commands": [
-          "echo -e \"\n## {{{newValue}}} ($(date +%Y-%m-%d))\n\n- Updated {{{depName}}} to {{{newValue}}}\n\" >> ansible/CHANGELOG.md"
+          "echo '- Updated {{{depName}}} to {{{newValue}}}' >> ansible/CHANGELOG.md"
         ],
-        "fileFilters": ["ansible/CHANGELOG.md"],
-        "executionMode": "branch"
+        "fileFilters": ["ansible/CHANGELOG.md"]
       }
     }
   ]
