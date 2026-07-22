@@ -4,31 +4,33 @@ on:
   workflow_dispatch:
     inputs:
       chart_dir:
-        description: "Path to Helm chart directory (leave empty to test all charts)"
+        description: "Path to Helm chart directory"
         required: false
         type: string
         default: ""
   push:
+    branches:
+      - main
     paths:
       - "kubernetes/charts/**"
       - ".github/workflows/helm.yml"
   pull_request:
     paths:
       - "kubernetes/charts/**"
-  workflow_call:
-    inputs:
-      chart_dir:
-        description: "Path to Helm chart directory"
-        required: true
-        type: string
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
-  helm:
-    name: "Helm Lint & Render"
+  helm-lint:
+    name: "Helm Lint, Template & Version Guard"
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: "Setup Helm"
         uses: azure/setup-helm@v4
@@ -53,3 +55,103 @@ jobs:
               fi
             done
           fi
+
+      - name: "Guardrail: Check Version Bump on Modified Charts"
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "=== Checking if modified charts bumped version in Chart.yaml ==="
+          git fetch origin main:main || true
+
+          FORK_POINT=$(git merge-base origin/main HEAD)
+          MODIFIED_FILES=$(git diff --name-only $FORK_POINT HEAD)
+
+          for chart_dir in kubernetes/charts/*/; do
+            if [ -f "${chart_dir}Chart.yaml" ]; then
+              CHART_NAME=$(yq e '.name' "${chart_dir}Chart.yaml")
+              CHART_VERSION=$(yq e '.version' "${chart_dir}Chart.yaml")
+              TAG_NAME="chart-${CHART_NAME}-${CHART_VERSION}"
+
+              if echo "$MODIFIED_FILES" | grep -q "^${chart_dir}"; then
+                echo "Chart ${CHART_NAME} was modified in this PR. Target tag: ${TAG_NAME}"
+                if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+                  echo "::error file=${chart_dir}Chart.yaml::Version ${CHART_VERSION} for chart '${CHART_NAME}' already exists as tag '${TAG_NAME}'. You MUST bump 'version' in Chart.yaml before merging!"
+                  exit 1
+                else
+                  echo "SUCCESS: Version bump validated for ${CHART_NAME} (v${CHART_VERSION})."
+                fi
+              fi
+            fi
+          done
+
+  helm-publish:
+    name: "Package, Tag & Push to GHCR"
+    needs: helm-lint
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Setup Helm"
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.14.0"
+
+      - name: "Log in to GHCR"
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Process Modified Charts: Tag, Release & OCI Push"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          mkdir -p .helm-packages
+
+          # Get files modified in the latest commit on main
+          MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
+
+          for chart_dir in kubernetes/charts/*/; do
+            if [ -f "${chart_dir}Chart.yaml" ]; then
+              CHART_NAME=$(yq e '.name' "${chart_dir}Chart.yaml")
+              CHART_VERSION=$(yq e '.version' "${chart_dir}Chart.yaml")
+              TAG_NAME="chart-${CHART_NAME}-${CHART_VERSION}"
+
+              # Only release charts that were actually modified in this commit
+              if echo "$MODIFIED_FILES" | grep -q "^${chart_dir}"; then
+                echo "--------------------------------------------------"
+                echo "Publishing updated chart: ${CHART_NAME} (v${CHART_VERSION}) -> Tag: ${TAG_NAME}"
+
+                if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+                  echo "::error::Tag ${TAG_NAME} already exists! Cannot overwrite existing release."
+                  exit 1
+                fi
+
+                # Build dependencies and package chart
+                helm dependency build "${chart_dir}" || true
+                helm package "${chart_dir}" --destination .helm-packages
+
+                PKG_FILE=".helm-packages/${CHART_NAME}-${CHART_VERSION}.tgz"
+
+                # Push OCI package to GHCR
+                if [ -f "$PKG_FILE" ]; then
+                  echo "Pushing ${PKG_FILE} to oci://ghcr.io/${OWNER_LOWER}/charts"
+                  helm push "$PKG_FILE" "oci://ghcr.io/${OWNER_LOWER}/charts"
+                fi
+
+                # Create Git tag and GitHub Release
+                echo "Creating Git tag and GitHub Release ${TAG_NAME}..."
+                git tag "${TAG_NAME}"
+                git push origin "${TAG_NAME}"
+
+                gh release create "${TAG_NAME}" "$PKG_FILE" \
+                  --title "Release ${TAG_NAME}" \
+                  --notes "Helm chart ${CHART_NAME} version ${CHART_VERSION} published to GHCR OCI registry."
+              fi
+            fi
+          done

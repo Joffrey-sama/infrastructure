@@ -1,0 +1,17 @@
+namespace: joffrey_sama
+name: infrastructure
+version: 1.0.0
+readme: README.md
+authors:
+  - Joffrey-sama
+description: Ansible collection for delva-home infrastructure management
+license:
+  - MIT
+tags:
+  - infrastructure
+  - k3s
+  - security
+repository: https://github.com/Joffrey-sama/infrastructure
+documentation: https://github.com/Joffrey-sama/infrastructure
+homepage: https://github.com/Joffrey-sama/infrastructure
+issues: https://github.com/Joffrey-sama/infrastructure/issues
