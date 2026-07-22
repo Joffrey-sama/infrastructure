@@ -39,11 +39,6 @@ variable "cloud_cluster_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "cloud_service_cidr" {
-  description = "Service CIDR of the Cloud cluster (e.g. 10.96.0.0/16)"
-  type        = string
-  default     = "10.96.0.0/16"
-}
 
 variable "cloud_nodes_cidr" {
   description = "CIDR block for the Cloud nodes on OCI"
@@ -55,11 +50,6 @@ variable "cloud_pods_cidr" {
   description = "CIDR block for the Cloud pods on OCI"
   type        = string
   default     = "10.244.0.0/16"
-}
-
-variable "cloud_vpn_endpoint" {
-  description = "Target IP on the Oracle side (NLB) for the IPsec tunnel"
-  type        = string
 }
 
 # --- On-Premise Configuration ---
@@ -90,15 +80,5 @@ variable "admin_source_cidr" {
 
 variable "user_ocid" {
   description = "Your OCID user to generate Customer Secret Keys"
-  type        = string
-}
-
-variable "oidc_issuer_url" {
-  description = "OIDC issuer URL (e.g. https://auth.delva-home.fr/application/o/kubernetes/)"
-  type        = string
-}
-
-variable "oidc_client_id" {
-  description = "OIDC client ID (typically kubernetes)"
   type        = string
 }

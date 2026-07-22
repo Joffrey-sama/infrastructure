@@ -60,7 +60,7 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: "ansible/roles"
         run: |
-          for pb in $(find ansible/playbooks -name "*.yml" -o -name "*.yaml"); do
+          find ansible/playbooks -type f \( -name "*.yml" -o -name "*.yaml" \) | while read -r pb; do
             echo "=== Syntax checking playbook: ${pb} ==="
             ansible-playbook "${pb}" --syntax-check || true
           done
