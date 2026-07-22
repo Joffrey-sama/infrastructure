@@ -9,8 +9,6 @@ on:
         type: string
         default: ""
   push:
-    branches:
-      - main
     paths:
       - "ansible/**"
       - ".github/workflows/ansible.yml"
@@ -40,7 +38,7 @@ permissions:
 jobs:
   ansible-ci:
     name: "Ansible Lint, Build & Version Guard"
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"

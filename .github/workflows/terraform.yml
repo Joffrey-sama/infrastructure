@@ -3,8 +3,6 @@ name: "Terraform CI/CD"
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
     paths:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
@@ -34,7 +32,7 @@ permissions:
 jobs:
   terraform-ci:
     name: "Terraform Lint, Validate & Version Guard"
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"

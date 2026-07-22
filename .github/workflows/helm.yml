@@ -9,8 +9,6 @@ on:
         type: string
         default: ""
   push:
-    branches:
-      - main
     paths:
       - "kubernetes/charts/**"
       - ".github/workflows/helm.yml"
@@ -113,7 +111,6 @@ jobs:
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           mkdir -p .helm-packages
 
-          # Get files modified in the latest commit on main
           MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
 
           for chart_dir in kubernetes/charts/*/; do
@@ -122,7 +119,6 @@ jobs:
               CHART_VERSION=$(yq e '.version' "${chart_dir}Chart.yaml")
               TAG_NAME="chart-${CHART_NAME}-${CHART_VERSION}"
 
-              # Only release charts that were actually modified in this commit
               if echo "$MODIFIED_FILES" | grep -q "^${chart_dir}"; then
                 echo "--------------------------------------------------"
                 echo "Publishing updated chart: ${CHART_NAME} (v${CHART_VERSION}) -> Tag: ${TAG_NAME}"
@@ -132,19 +128,16 @@ jobs:
                   exit 1
                 fi
 
-                # Build dependencies and package chart
                 helm dependency build "${chart_dir}" || true
                 helm package "${chart_dir}" --destination .helm-packages
 
                 PKG_FILE=".helm-packages/${CHART_NAME}-${CHART_VERSION}.tgz"
 
-                # Push OCI package to GHCR
                 if [ -f "$PKG_FILE" ]; then
                   echo "Pushing ${PKG_FILE} to oci://ghcr.io/${OWNER_LOWER}/charts"
                   helm push "$PKG_FILE" "oci://ghcr.io/${OWNER_LOWER}/charts"
                 fi
 
-                # Create Git tag and GitHub Release
                 echo "Creating Git tag and GitHub Release ${TAG_NAME}..."
                 git tag "${TAG_NAME}"
                 git push origin "${TAG_NAME}"

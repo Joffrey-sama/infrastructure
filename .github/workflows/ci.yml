@@ -3,8 +3,6 @@ name: "CI Workflows Release"
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
     paths:
       - ".github/workflows/**"
   pull_request:
@@ -17,6 +15,7 @@ permissions:
 jobs:
   workflows-lint:
     name: "Actionlint & Workflow Version Guard"
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
@@ -82,7 +81,7 @@ jobs:
               exit 1
             fi
 
-            echo "Creating Git tag and GitHub Release ${TAG_NAME}..."
+            echo "Creating Git tag and GitHub Release ${TAG_NAME}"
             git tag "${TAG_NAME}"
             git push origin "${TAG_NAME}"
 
