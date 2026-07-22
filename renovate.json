@@ -7,6 +7,7 @@
   ],
   "mode": "full",
   "bumpVersion": "patch",
+  "rebaseWhen": "behind-base-branch",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "packageRules": [
@@ -33,7 +34,14 @@
     },
     {
       "matchManagers": ["ansible"],
-      "addLabels": ["renovate", "ansible"]
+      "addLabels": ["renovate", "ansible"],
+      "postUpgradeTasks": {
+        "commands": [
+          "echo -e \"\n## {{{newValue}}} ($(date +%Y-%m-%d))\n\n- Updated {{{depName}}} to {{{newValue}}}\n\" >> ansible/CHANGELOG.md"
+        ],
+        "fileFilters": ["ansible/CHANGELOG.md"],
+        "executionMode": "branch"
+      }
     }
   ]
 }
