@@ -10,7 +10,6 @@ serviceAccount:
   create: false
 
 main:
-
   controllers:
     flaresolverr:
       enabled: true
@@ -20,7 +19,17 @@ main:
         main:
           image:
             repository: ghcr.io/flaresolverr/flaresolverr
-            tag: v3.3.21
+            tag: v3.5.0
+
+    byparr:
+      enabled: false
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: ghcr.io/thephaseless/byparr
+            tag: latest
 
     prowlarr:
       enabled: true
@@ -37,11 +46,17 @@ main:
               type: HTTP
               path: /ping
               port: 9696
+              spec:
+                timeoutSeconds: 5
+                periodSeconds: 10
             readiness:
               enabled: true
               type: HTTP
               path: /ping
               port: 9696
+              spec:
+                timeoutSeconds: 5
+                periodSeconds: 10
             startup:
               enabled: true
               type: HTTP
@@ -55,7 +70,7 @@ main:
               value: DisabledForLocalAddresses
             - name: PROWLARR__AUTH__METHOD
               value: "Forms"
-            # Database: Defaults to SQLite (local file in /config). 
+            # Database: Defaults to SQLite (local file in /config).
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: PROWLARR__POSTGRES__HOST
             #   value: "postgresql-host"
@@ -68,7 +83,8 @@ main:
             # - name: PROWLARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: prowlarr-postgresql-secret, key: PASSWORD_PROWLARR } }
             - name: PROWLARR__AUTH__APIKEY
-              valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
+              valueFrom:
+                { secretKeyRef: { name: servarr-api-key, key: api-key } }
           resources:
             requests:
               cpu: 100m
@@ -89,11 +105,17 @@ main:
               type: HTTP
               path: /ping
               port: 7878
+              spec:
+                timeoutSeconds: 5
+                periodSeconds: 10
             readiness:
               enabled: true
               type: HTTP
               path: /ping
               port: 7878
+              spec:
+                timeoutSeconds: 5
+                periodSeconds: 10
             startup:
               enabled: true
               type: HTTP
@@ -107,7 +129,7 @@ main:
               value: "Forms"
             - name: RADARR__AUTH__REQUIRED
               value: DisabledForLocalAddresses
-            # Database: Defaults to SQLite (local file in /config). 
+            # Database: Defaults to SQLite (local file in /config).
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: RADARR__POSTGRES__HOST
             #   value: "postgresql-host"
@@ -120,7 +142,8 @@ main:
             # - name: RADARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: radarr-postgresql-secret, key: PASSWORD_RADARR } }
             - name: RADARR__AUTH__APIKEY
-              valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
+              valueFrom:
+                { secretKeyRef: { name: servarr-api-key, key: api-key } }
 
     sonarr:
       enabled: true
@@ -137,11 +160,17 @@ main:
               type: HTTP
               path: /ping
               port: 8989
+              spec:
+                timeoutSeconds: 5
+                periodSeconds: 10
             readiness:
               enabled: true
               type: HTTP
               path: /ping
               port: 8989
+              spec:
+                timeoutSeconds: 5
+                periodSeconds: 10
             startup:
               enabled: true
               type: HTTP
@@ -155,7 +184,7 @@ main:
               value: "Forms"
             - name: SONARR__AUTH__REQUIRED
               value: DisabledForLocalAddresses
-            # Database: Defaults to SQLite (local file in /config). 
+            # Database: Defaults to SQLite (local file in /config).
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: SONARR__POSTGRES__HOST
             #   value: "postgresql-host"
@@ -168,7 +197,8 @@ main:
             # - name: SONARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: sonarr-postgresql-secret, key: PASSWORD_SONARR } }
             - name: SONARR__AUTH__APIKEY
-              valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
+              valueFrom:
+                { secretKeyRef: { name: servarr-api-key, key: api-key } }
 
     bazarr:
       enabled: true
@@ -209,7 +239,7 @@ main:
               value: "Forms"
             - name: BAZARR__AUTH__REQUIRED
               value: DisabledForLocalAddresses
-            # Database: Defaults to SQLite (local file in /config). 
+            # Database: Defaults to SQLite (local file in /config).
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: BAZARR__POSTGRES__HOST
             #   value: "postgresql-host"
@@ -222,7 +252,8 @@ main:
             # - name: BAZARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: bazarr-postgresql-secret, key: PASSWORD_BAZARR } }
             - name: BAZARR__AUTH__APIKEY
-              valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
+              valueFrom:
+                { secretKeyRef: { name: servarr-api-key, key: api-key } }
         gluetun:
           enabled: false
           image:
@@ -236,7 +267,14 @@ main:
 
   service:
     flaresolverr:
+      enabled: true
       controller: flaresolverr
+      ports:
+        http:
+          port: 8191
+    byparr:
+      enabled: false
+      controller: byparr
       ports:
         http:
           port: 8191
