@@ -73,18 +73,18 @@ jobs:
       - name: "Guardrail: Check Version Bump on galaxy.yml"
         if: github.event_name == 'pull_request'
         run: |
-          echo "=== Checking if Ansible Collection version bumped in galaxy.yml ==="
+          git fetch origin --tags || true
           git fetch origin main:main || true
 
           FORK_POINT=$(git merge-base origin/main HEAD)
           MODIFIED_FILES=$(git diff --name-only "$FORK_POINT" HEAD)
 
           if echo "$MODIFIED_FILES" | grep -q "^ansible/"; then
-            COLLECTION_VERSION=$(yq e '.version' ansible/galaxy.yml)
+            COLLECTION_VERSION=$(python3 -c "import yaml; print(yaml.safe_load(open('ansible/galaxy.yml'))['version'])")
             TAG_NAME="ansible-v${COLLECTION_VERSION}"
 
             echo "Ansible files modified. Target tag: ${TAG_NAME}"
-            if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+            if git rev-parse --verify "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
               echo "::error file=ansible/galaxy.yml::Version ${COLLECTION_VERSION} in ansible/galaxy.yml already exists as tag '${TAG_NAME}'. You MUST bump 'version' in galaxy.yml before merging!"
               exit 1
             else
@@ -100,7 +100,7 @@ jobs:
           MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
 
           if echo "$MODIFIED_FILES" | grep -q "^ansible/"; then
-            COLLECTION_VERSION=$(yq e '.version' ansible/galaxy.yml)
+            COLLECTION_VERSION=$(python3 -c "import yaml; print(yaml.safe_load(open('ansible/galaxy.yml'))['version'])")
             TAG_NAME="ansible-v${COLLECTION_VERSION}"
 
             echo "Publishing Ansible Collection v${COLLECTION_VERSION} -> Tag: ${TAG_NAME}"

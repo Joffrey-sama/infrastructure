@@ -57,7 +57,7 @@ jobs:
       - name: "Guardrail: Check Version Bump on Modified Charts"
         if: github.event_name == 'pull_request'
         run: |
-          echo "=== Checking if modified charts bumped version in Chart.yaml ==="
+          git fetch origin --tags || true
           git fetch origin main:main || true
 
           FORK_POINT=$(git merge-base origin/main HEAD)
@@ -65,13 +65,13 @@ jobs:
 
           for chart_dir in kubernetes/charts/*/; do
             if [ -f "${chart_dir}Chart.yaml" ]; then
-              CHART_NAME=$(yq e '.name' "${chart_dir}Chart.yaml")
-              CHART_VERSION=$(yq e '.version' "${chart_dir}Chart.yaml")
+              CHART_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['name'])")
+              CHART_VERSION=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['version'])")
               TAG_NAME="chart-${CHART_NAME}-${CHART_VERSION}"
 
               if echo "$MODIFIED_FILES" | grep -q "^${chart_dir}"; then
                 echo "Chart ${CHART_NAME} was modified in this PR. Target tag: ${TAG_NAME}"
-                if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+                if git rev-parse --verify "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
                   echo "::error file=${chart_dir}Chart.yaml::Version ${CHART_VERSION} for chart '${CHART_NAME}' already exists as tag '${TAG_NAME}'. You MUST bump 'version' in Chart.yaml before merging!"
                   exit 1
                 else
@@ -115,8 +115,8 @@ jobs:
 
           for chart_dir in kubernetes/charts/*/; do
             if [ -f "${chart_dir}Chart.yaml" ]; then
-              CHART_NAME=$(yq e '.name' "${chart_dir}Chart.yaml")
-              CHART_VERSION=$(yq e '.version' "${chart_dir}Chart.yaml")
+              CHART_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['name'])")
+              CHART_VERSION=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['version'])")
               TAG_NAME="chart-${CHART_NAME}-${CHART_VERSION}"
 
               if echo "$MODIFIED_FILES" | grep -q "^${chart_dir}"; then

@@ -64,7 +64,7 @@ jobs:
       - name: "Guardrail: Check Version Bump on Modified Modules"
         if: github.event_name == 'pull_request'
         run: |
-          echo "=== Checking if modified Terraform modules bumped VERSION ==="
+          git fetch origin --tags || true
           git fetch origin main:main || true
 
           FORK_POINT=$(git merge-base origin/main HEAD)
@@ -78,7 +78,7 @@ jobs:
 
               if echo "$MODIFIED_FILES" | grep -q "^${mod_dir}"; then
                 echo "Module ${MOD_NAME} was modified in this PR. Target tag: ${TAG_NAME}"
-                if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+                if git rev-parse --verify "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
                   echo "::error file=${mod_dir}VERSION::Version ${MOD_VERSION} for module '${MOD_NAME}' already exists as tag '${TAG_NAME}'. You MUST bump '${mod_dir}VERSION' before merging!"
                   exit 1
                 else

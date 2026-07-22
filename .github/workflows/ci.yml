@@ -34,7 +34,7 @@ jobs:
       - name: "Guardrail: Check Version Bump on Workflows"
         if: github.event_name == 'pull_request'
         run: |
-          echo "=== Checking if GitHub Actions Workflows bumped VERSION ==="
+          git fetch origin --tags || true
           git fetch origin main:main || true
 
           FORK_POINT=$(git merge-base origin/main HEAD)
@@ -45,7 +45,7 @@ jobs:
             TAG_NAME="workflow-v${WF_VERSION}"
 
             echo "Workflows modified. Target tag: ${TAG_NAME}"
-            if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+            if git rev-parse --verify "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
               echo "::error file=.github/workflows/VERSION::Version ${WF_VERSION} in .github/workflows/VERSION already exists as tag '${TAG_NAME}'. You MUST bump '.github/workflows/VERSION' before merging!"
               exit 1
             else
