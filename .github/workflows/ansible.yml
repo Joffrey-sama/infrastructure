@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   ansible-ci:
-    name: "Ansible Lint & Version Guard"
+    name: "Ansible Lint, Build & Version Guard"
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
@@ -66,6 +66,11 @@ jobs:
             echo "=== Syntax checking playbook: ${pb} ==="
             ansible-playbook "${pb}" --syntax-check || true
           done
+
+      - name: "Ansible Collection Build Check"
+        run: |
+          echo "=== Testing Ansible Collection Build ==="
+          (cd ansible && ansible-galaxy collection build --force)
 
       - name: "Guardrail: Check Version Bump on galaxy.yml"
         if: github.event_name == 'pull_request'

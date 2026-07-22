@@ -47,14 +47,20 @@ jobs:
         with:
           terraform_version: "1.7.0"
 
+      - name: "Setup TFLint"
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.50.0
+
       - name: "Terraform Format Check"
         run: terraform fmt -check -recursive terraform/
 
-      - name: "Terraform Validate All Modules"
+      - name: "Terraform Validate & TFLint All Modules"
         run: |
+          tflint --init || true
           for dir in $(find terraform/modules -mindepth 1 -maxdepth 1 -type d); do
-            echo "=== Validating Terraform module: ${dir} ==="
-            (cd "${dir}" && terraform init -backend=false && terraform validate)
+            echo "=== Validating & Linting Terraform module: ${dir} ==="
+            (cd "${dir}" && terraform init -backend=false && terraform validate && tflint)
           done
 
       - name: "Guardrail: Check Version Bump on Modified Modules"

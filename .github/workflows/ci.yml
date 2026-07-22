@@ -1,0 +1,92 @@
+name: "CI Workflows Release"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+
+permissions:
+  contents: write
+
+jobs:
+  workflows-lint:
+    name: "Actionlint & Workflow Version Guard"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Download Actionlint"
+        run: |
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.0
+          sudo mv actionlint /usr/local/bin/
+
+      - name: "Run Actionlint"
+        run: actionlint
+
+      - name: "Guardrail: Check Version Bump on Workflows"
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "=== Checking if GitHub Actions Workflows bumped VERSION ==="
+          git fetch origin main:main || true
+
+          FORK_POINT=$(git merge-base origin/main HEAD)
+          MODIFIED_FILES=$(git diff --name-only $FORK_POINT HEAD)
+
+          if echo "$MODIFIED_FILES" | grep -q "^\.github/workflows/"; then
+            WF_VERSION=$(cat .github/workflows/VERSION | tr -d ' \n\r')
+            TAG_NAME="workflow-v${WF_VERSION}"
+
+            echo "Workflows modified. Target tag: ${TAG_NAME}"
+            if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+              echo "::error file=.github/workflows/VERSION::Version ${WF_VERSION} in .github/workflows/VERSION already exists as tag '${TAG_NAME}'. You MUST bump '.github/workflows/VERSION' before merging!"
+              exit 1
+            else
+              echo "SUCCESS: Workflow version bump validated (v${WF_VERSION})."
+            fi
+          fi
+
+  workflows-publish:
+    name: "Tag & Release GitHub Actions Workflows"
+    needs: workflows-lint
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Process Workflows Release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
+
+          if echo "$MODIFIED_FILES" | grep -q "^\.github/workflows/"; then
+            WF_VERSION=$(cat .github/workflows/VERSION | tr -d ' \n\r')
+            TAG_NAME="workflow-v${WF_VERSION}"
+
+            echo "Publishing Workflows Release v${WF_VERSION} -> Tag: ${TAG_NAME}"
+
+            if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+              echo "::error::Tag ${TAG_NAME} already exists! Cannot overwrite existing release."
+              exit 1
+            fi
+
+            echo "Creating Git tag and GitHub Release ${TAG_NAME}..."
+            git tag "${TAG_NAME}"
+            git push origin "${TAG_NAME}"
+
+            gh release create "${TAG_NAME}" \
+              --title "Release ${TAG_NAME}" \
+              --notes "Reusable GitHub Actions workflows in infrastructure updated to version ${WF_VERSION}."
+          fi
