@@ -4,7 +4,7 @@ dependencies:
 - alias: main
   name: app-template
   repository: https://bjw-s-labs.github.io/helm-charts/
-  version: 5.0.1
+  version: 5.0.2
 description: A Helm chart for the Servarr suite (Radarr, Sonarr, Prowlarr, Bazarr)
   and helper Flaresolverr
 name: servarr
