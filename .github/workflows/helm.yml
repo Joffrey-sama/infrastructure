@@ -13,8 +13,6 @@ on:
       - "kubernetes/charts/**"
       - ".github/workflows/helm.yml"
   pull_request:
-    paths:
-      - "kubernetes/charts/**"
 
 permissions:
   contents: write

@@ -7,8 +7,6 @@ on:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
   pull_request:
-    paths:
-      - "terraform/**"
   workflow_call:
     inputs:
       directory:
