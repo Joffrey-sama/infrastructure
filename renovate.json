@@ -18,46 +18,52 @@
     },
     {
       "matchUpdateTypes": ["major"],
-      "bumpVersion": "major",
       "addLabels": ["major"]
     },
     {
       "matchUpdateTypes": ["minor"],
-      "bumpVersion": "minor",
       "addLabels": ["minor"]
     },
     {
       "matchUpdateTypes": ["patch", "digest", "pin"],
-      "bumpVersion": "patch",
       "addLabels": ["patch"]
     },
     {
       "matchManagers": ["github-actions"],
       "addLabels": ["renovate", "github-actions"],
-      "postUpgradeTasks": {
-        "commands": [
-          "awk -F. '{$NF=$NF+1}1' OFS=. .github/workflows/VERSION > .github/workflows/VERSION.tmp && mv .github/workflows/VERSION.tmp .github/workflows/VERSION"
-        ],
-        "fileFilters": [".github/workflows/VERSION"]
-      }
+      "bumpVersions": [
+        {
+          "filePatterns": [".github/workflows/VERSION"],
+          "matchStrings": ["^(?<version>.*)$"],
+          "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
+        }
+      ]
     },
     {
       "matchManagers": ["helmv3", "helm-v3", "helm-values", "helmfile"],
-      "addLabels": ["renovate", "helm"]
+      "addLabels": ["renovate", "helm"],
+      "bumpVersions": [
+        {
+          "filePatterns": ["{{packageFileDir}}/Chart.yaml"],
+          "matchStrings": ["^version:\\s*(?<version>.*)$"],
+          "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
+        }
+      ]
     },
     {
       "matchManagers": ["terraform", "terraform-vars", "terragrunt"],
-      "addLabels": ["renovate", "terraform"]
+      "addLabels": ["renovate", "terraform"],
+      "bumpVersions": [
+        {
+          "filePatterns": ["{{packageFileDir}}/VERSION"],
+          "matchStrings": ["^(?<version>.*)$"],
+          "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
+        }
+      ]
     },
     {
       "matchManagers": ["ansible", "ansible-galaxy"],
-      "addLabels": ["renovate", "ansible"],
-      "postUpgradeTasks": {
-        "commands": [
-          "echo '- Updated {{{depName}}} to {{{newValue}}}' >> ansible/CHANGELOG.md"
-        ],
-        "fileFilters": ["ansible/CHANGELOG.md"]
-      }
+      "addLabels": ["renovate", "ansible"]
     }
   ]
 }
