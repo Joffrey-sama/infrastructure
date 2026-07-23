@@ -67,7 +67,7 @@ jobs:
             if [ -f "${chart_dir}Chart.yaml" ]; then
               CHART_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['name'])")
               CHART_VERSION=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['version'])")
-              TAG_NAME="chart-${CHART_NAME}-${CHART_VERSION}"
+              TAG_NAME="chart-${CHART_NAME}-v${CHART_VERSION}"
 
               if echo "$MODIFIED_FILES" | grep -q "^${chart_dir}"; then
                 echo "Chart ${CHART_NAME} was modified in this PR. Target tag: ${TAG_NAME}"
@@ -117,7 +117,7 @@ jobs:
             if [ -f "${chart_dir}Chart.yaml" ]; then
               CHART_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['name'])")
               CHART_VERSION=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['version'])")
-              TAG_NAME="chart-${CHART_NAME}-${CHART_VERSION}"
+              TAG_NAME="chart-${CHART_NAME}-v${CHART_VERSION}"
 
               if echo "$MODIFIED_FILES" | grep -q "^${chart_dir}"; then
                 echo "--------------------------------------------------"

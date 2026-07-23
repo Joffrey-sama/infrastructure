@@ -74,7 +74,7 @@ jobs:
             if [ -f "${mod_dir}VERSION" ]; then
               MOD_NAME=$(basename "${mod_dir}")
               MOD_VERSION=$(tr -d ' \n\r' < "${mod_dir}VERSION")
-              TAG_NAME="tf-${MOD_NAME}-${MOD_VERSION}"
+              TAG_NAME="tf-${MOD_NAME}-v${MOD_VERSION}"
 
               if echo "$MODIFIED_FILES" | grep -q "^${mod_dir}"; then
                 echo "Module ${MOD_NAME} was modified in this PR. Target tag: ${TAG_NAME}"
@@ -99,7 +99,7 @@ jobs:
             if [ -f "${mod_dir}VERSION" ]; then
               MOD_NAME=$(basename "${mod_dir}")
               MOD_VERSION=$(tr -d ' \n\r' < "${mod_dir}VERSION")
-              TAG_NAME="tf-${MOD_NAME}-${MOD_VERSION}"
+              TAG_NAME="tf-${MOD_NAME}-v${MOD_VERSION}"
 
               if echo "$MODIFIED_FILES" | grep -q "^${mod_dir}"; then
                 echo "--------------------------------------------------"

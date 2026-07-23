@@ -7,6 +7,9 @@
   ],
   "mode": "full",
   "rebaseWhen": "behind-base-branch",
+  "separateMultipleVarUpdates": true,
+  "separateMajorMinor": true,
+  "separateMinorPatch": true,
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "packageRules": [
@@ -27,18 +30,24 @@
     },
     {
       "matchManagers": ["github-actions"],
-      "addLabels": ["renovate", "github-actions"]
+      "addLabels": ["renovate", "github-actions"],
+      "postUpgradeTasks": {
+        "commands": [
+          "awk -F. '{$NF=$NF+1}1' OFS=. .github/workflows/VERSION > .github/workflows/VERSION.tmp && mv .github/workflows/VERSION.tmp .github/workflows/VERSION"
+        ],
+        "fileFilters": [".github/workflows/VERSION"]
+      }
     },
     {
-      "matchManagers": ["helm-values", "helm-v3", "helmfile"],
+      "matchManagers": ["helmv3", "helm-v3", "helm-values", "helmfile"],
       "addLabels": ["renovate", "helm"]
     },
     {
-      "matchManagers": ["terraform", "terraform-vars"],
+      "matchManagers": ["terraform", "terraform-vars", "terragrunt"],
       "addLabels": ["renovate", "terraform"]
     },
     {
-      "matchManagers": ["ansible"],
+      "matchManagers": ["ansible", "ansible-galaxy"],
       "addLabels": ["renovate", "ansible"],
       "postUpgradeTasks": {
         "commands": [
