@@ -7,9 +7,9 @@
   ],
   "mode": "full",
   "rebaseWhen": "behind-base-branch",
-  "separateMultipleVarUpdates": true,
   "separateMajorMinor": true,
   "separateMinorPatch": true,
+  "separateMultiplePackages": true,
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "packageRules": [
