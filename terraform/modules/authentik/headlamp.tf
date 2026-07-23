@@ -15,7 +15,7 @@ resource "authentik_provider_oauth2" "headlamp" {
   allowed_redirect_uris = [
     {
       matching_mode = "strict",
-      url           = "https://headlamp.delva-home.fr/oidc-callback"
+      url           = var.headlamp_redirect_uri
     }
   ]
 }

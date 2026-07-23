@@ -6,18 +6,46 @@
     ":semanticCommits"
   ],
   "mode": "full",
-  "bumpVersion": "patch",
+  "rebaseWhen": "behind-base-branch",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "packageRules": [
     {
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
-      ],
-      "automerge": false
+      "matchUpdateTypes": ["major"],
+      "bumpVersion": "major",
+      "addLabels": ["major"]
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "bumpVersion": "minor",
+      "addLabels": ["minor"]
+    },
+    {
+      "matchUpdateTypes": ["patch", "digest", "pin"],
+      "bumpVersion": "patch",
+      "addLabels": ["patch"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["renovate", "github-actions"]
+    },
+    {
+      "matchManagers": ["helm-values", "helm-v3", "helmfile"],
+      "addLabels": ["renovate", "helm"]
+    },
+    {
+      "matchManagers": ["terraform", "terraform-vars"],
+      "addLabels": ["renovate", "terraform"]
+    },
+    {
+      "matchManagers": ["ansible"],
+      "addLabels": ["renovate", "ansible"],
+      "postUpgradeTasks": {
+        "commands": [
+          "echo '- Updated {{{depName}}} to {{{newValue}}}' >> ansible/CHANGELOG.md"
+        ],
+        "fileFilters": ["ansible/CHANGELOG.md"]
+      }
     }
   ]
 }

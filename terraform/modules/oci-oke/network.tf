@@ -163,7 +163,7 @@ resource "oci_core_ipsec" "vpn_connection" {
   compartment_id = var.compartment_id
   cpe_id         = oci_core_cpe.local_cluster.id
   drg_id         = oci_core_drg.vpn_drg.id
-  static_routes  = ["${var.vpn_vip}/32", "${var.onprem_nodes_cidr}"]
+  static_routes  = ["${var.vpn_vip}/32", var.onprem_nodes_cidr]
   display_name   = "cloud-to-onprem-ipsec"
 }
 
@@ -179,8 +179,8 @@ resource "oci_core_ipsec_connection_tunnel_management" "vpn_tunnel_1" {
 
   encryption_domain_config {
     # List the encryption domains offered by the CPE (StrongSwan)
-    cpe_traffic_selector    = ["${var.vpn_vip}/32", "${var.onprem_nodes_cidr}", "${var.onprem_pods_cidr}"]
-    oracle_traffic_selector = ["${var.cloud_nodes_cidr}", "${var.cloud_pods_cidr}"]
+    cpe_traffic_selector    = ["${var.vpn_vip}/32", var.onprem_nodes_cidr, var.onprem_pods_cidr]
+    oracle_traffic_selector = [var.cloud_nodes_cidr, var.cloud_pods_cidr]
   }
 }
 
@@ -193,8 +193,8 @@ resource "oci_core_ipsec_connection_tunnel_management" "vpn_tunnel_2" {
   nat_translation_enabled = "ENABLED"
 
   encryption_domain_config {
-    cpe_traffic_selector    = ["${var.vpn_vip}/32", "${var.onprem_nodes_cidr}", "${var.onprem_pods_cidr}"]
-    oracle_traffic_selector = ["${var.cloud_nodes_cidr}", "${var.cloud_pods_cidr}"]
+    cpe_traffic_selector    = ["${var.vpn_vip}/32", var.onprem_nodes_cidr, var.onprem_pods_cidr]
+    oracle_traffic_selector = [var.cloud_nodes_cidr, var.cloud_pods_cidr]
   }
 }
 
