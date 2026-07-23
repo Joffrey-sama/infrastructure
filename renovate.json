@@ -6,19 +6,24 @@
     ":semanticCommits"
   ],
   "mode": "full",
-  "bumpVersion": "patch",
   "rebaseWhen": "behind-base-branch",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "packageRules": [
     {
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
-      ],
-      "automerge": false
+      "matchUpdateTypes": ["major"],
+      "bumpVersion": "major",
+      "addLabels": ["major"]
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "bumpVersion": "minor",
+      "addLabels": ["minor"]
+    },
+    {
+      "matchUpdateTypes": ["patch", "digest", "pin"],
+      "bumpVersion": "patch",
+      "addLabels": ["patch"]
     },
     {
       "matchManagers": ["github-actions"],

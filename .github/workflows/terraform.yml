@@ -105,7 +105,7 @@ jobs:
                 echo "--------------------------------------------------"
                 echo "Publishing updated Terraform module: ${MOD_NAME} (v${MOD_VERSION}) -> Tag: ${TAG_NAME}"
 
-                if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+                if git rev-parse --verify "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
                   echo "::error::Tag ${TAG_NAME} already exists! Cannot overwrite existing release."
                   exit 1
                 fi
