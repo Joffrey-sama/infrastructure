@@ -142,7 +142,7 @@ jobs:
 
                 gh release create "${TAG_NAME}" "$PKG_FILE" \
                   --title "Release ${TAG_NAME}" \
-                  --notes "Helm chart ${CHART_NAME} version ${CHART_VERSION} published to GHCR OCI registry."
+                  --generate-notes
               fi
             fi
           done

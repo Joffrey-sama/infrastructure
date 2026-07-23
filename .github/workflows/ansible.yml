@@ -109,12 +109,13 @@ jobs:
             fi
 
             echo "Creating Git tag and GitHub Release ${TAG_NAME}..."
+            (cd ansible && ansible-galaxy collection build --force)
             git tag "${TAG_NAME}"
             git push origin "${TAG_NAME}"
 
-            gh release create "${TAG_NAME}" \
+            gh release create "${TAG_NAME}" ansible/*.tar.gz \
               --title "Release ${TAG_NAME}" \
-              --notes "Ansible collection infrastructure updated to version ${COLLECTION_VERSION}."
+              --generate-notes
           fi
 
   ansible-deploy:

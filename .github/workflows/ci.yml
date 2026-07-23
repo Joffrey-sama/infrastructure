@@ -85,5 +85,5 @@ jobs:
 
             gh release create "${TAG_NAME}" \
               --title "Release ${TAG_NAME}" \
-              --notes "Reusable GitHub Actions workflows in infrastructure updated to version ${WF_VERSION}."
+              --generate-notes
           fi

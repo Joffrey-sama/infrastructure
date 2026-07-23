@@ -114,7 +114,7 @@ jobs:
 
                 gh release create "${TAG_NAME}" \
                   --title "Release ${TAG_NAME}" \
-                  --notes "Terraform module ${MOD_NAME} updated to version ${MOD_VERSION}."
+                  --generate-notes
               fi
             fi
           done
