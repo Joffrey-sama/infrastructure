@@ -13,8 +13,6 @@ on:
       - "ansible/**"
       - ".github/workflows/ansible.yml"
   pull_request:
-    paths:
-      - "ansible/**"
   workflow_call:
     inputs:
       playbook:
