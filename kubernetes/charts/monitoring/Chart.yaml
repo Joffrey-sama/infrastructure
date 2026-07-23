@@ -1,13 +1,13 @@
 apiVersion: v2
 name: monitoring
-version: 1.0.0
+version: 1.0.1
 dependencies:
   - name: grafana
     version: "12.3.0"
     repository: "https://grafana-community.github.io/helm-charts"
     tags: ["collector"]
   - name: greptimedb-standalone
-    version: "0.4.2"
+    version: "0.4.8"
     repository: "https://greptimeteam.github.io/helm-charts/"
     tags: ["collector"]
   - name: headlamp
