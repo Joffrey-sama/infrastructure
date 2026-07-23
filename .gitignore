@@ -33,6 +33,7 @@ kubeconfig.yaml
 *kubeconfig*
 kubernetes/charts/*/charts/
 kubernetes/charts/*/*.tgz
+.helm-packages/
 Chart.lock
 *.lock.hcl
 
