@@ -29,6 +29,10 @@ jobs:
       - name: "Run Actionlint"
         run: actionlint
 
+      - name: "Validate Renovate Config"
+        run: |
+          npx --package renovate renovate-config-validator renovate.json
+
       - name: "Guardrail: Check Version Bump on Workflows"
         if: github.event_name == 'pull_request'
         run: |

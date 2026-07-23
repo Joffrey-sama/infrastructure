@@ -9,10 +9,13 @@
   "rebaseWhen": "behind-base-branch",
   "separateMajorMinor": true,
   "separateMinorPatch": true,
-  "separateMultiplePackages": true,
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "packageRules": [
+    {
+      "matchPackageNames": ["/.*/"],
+      "groupName": null
+    },
     {
       "matchUpdateTypes": ["major"],
       "bumpVersion": "major",
