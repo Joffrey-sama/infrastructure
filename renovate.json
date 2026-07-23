@@ -29,34 +29,37 @@
       "addLabels": ["patch"]
     },
     {
-      "matchManagers": ["github-actions"],
+      "matchFileNames": [".github/workflows/**"],
       "addLabels": ["renovate", "github-actions"],
       "bumpVersions": [
         {
+          "name": "Bump workflow version",
           "filePatterns": [".github/workflows/VERSION"],
-          "matchStrings": ["^(?<version>.*)$"],
+          "matchStrings": ["^(?<version>[^\\s]+)"],
           "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
         }
       ]
     },
     {
-      "matchManagers": ["helmv3", "helm-v3", "helm-values", "helmfile"],
+      "matchFileNames": ["kubernetes/charts/**"],
       "addLabels": ["renovate", "helm"],
       "bumpVersions": [
         {
+          "name": "Bump chart version",
           "filePatterns": ["{{packageFileDir}}/Chart.yaml"],
-          "matchStrings": ["^version:\\s*(?<version>.*)$"],
+          "matchStrings": ["version:\\s\"?(?<version>[^\\s\"]+)\"?"],
           "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
         }
       ]
     },
     {
-      "matchManagers": ["terraform", "terraform-vars", "terragrunt"],
+      "matchFileNames": ["terraform/modules/**"],
       "addLabels": ["renovate", "terraform"],
       "bumpVersions": [
         {
+          "name": "Bump terraform module version",
           "filePatterns": ["{{packageFileDir}}/VERSION"],
-          "matchStrings": ["^(?<version>.*)$"],
+          "matchStrings": ["^(?<version>[^\\s]+)"],
           "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
         }
       ]
