@@ -9,7 +9,7 @@ headscale:
   podAnnotations: {}
   image:
     repository: headscale/headscale
-    tag: 0.28.0
+    tag: v0.29.2
     pullPolicy: IfNotPresent
 
   publicUrl: "https://headscale.delva-home.fr"
