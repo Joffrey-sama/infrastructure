@@ -48,7 +48,7 @@
         {
           "name": "Bump chart version",
           "filePatterns": ["{{packageFileDir}}/Chart.yaml"],
-          "matchStrings": ["(?<=\\n|^)version:\\s*\"?(?<version>[0-9.]+)\"?"],
+          "matchStrings": ["(?:^|\\n)version:\\s*\"?(?<version>[0-9.]+)\"?"],
           "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
         }
       ]
