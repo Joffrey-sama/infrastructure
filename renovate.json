@@ -14,7 +14,8 @@
   "packageRules": [
     {
       "matchPackageNames": ["/.*/"],
-      "groupName": null
+      "groupName": null,
+      "additionalBranchPrefix": "{{packageFileDir}}-"
     },
     {
       "matchUpdateTypes": ["major"],
@@ -29,7 +30,7 @@
       "addLabels": ["patch"]
     },
     {
-      "matchFileNames": [".github/workflows/**"],
+      "matchManagers": ["github-actions"],
       "addLabels": ["renovate", "github-actions"],
       "bumpVersions": [
         {
@@ -41,19 +42,19 @@
       ]
     },
     {
-      "matchFileNames": ["kubernetes/charts/**"],
+      "matchManagers": ["helmv3", "helm-v3", "helm-values", "helmfile", "helm-requirements"],
       "addLabels": ["renovate", "helm"],
       "bumpVersions": [
         {
           "name": "Bump chart version",
           "filePatterns": ["{{packageFileDir}}/Chart.yaml"],
-          "matchStrings": ["version:\\s\"?(?<version>[^\\s\"]+)\"?"],
+          "matchStrings": ["^version:\\s*\"?(?<version>[0-9.]+)\"?"],
           "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
         }
       ]
     },
     {
-      "matchFileNames": ["terraform/modules/**"],
+      "matchManagers": ["terraform", "terraform-version", "terraform-vars", "terragrunt", "terragrunt-version", "tflint-plugin"],
       "addLabels": ["renovate", "terraform"],
       "bumpVersions": [
         {
@@ -67,6 +68,10 @@
     {
       "matchManagers": ["ansible", "ansible-galaxy"],
       "addLabels": ["renovate", "ansible"]
+    },
+    {
+      "matchManagers": ["kubernetes"],
+      "addLabels": ["renovate", "kubernetes"]
     }
   ]
 }
