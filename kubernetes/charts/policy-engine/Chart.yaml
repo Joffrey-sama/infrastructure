@@ -2,10 +2,10 @@ apiVersion: v2
 name: policy-engine
 description: A Helm chart for Kyverno Policy Engine and admission control rules
 type: application
-version: 0.1.0
+version: 0.1.1
 
 dependencies:
   - name: kyverno
-    version: "3.3.4"
+    version: "3.3.9"
     repository: "https://kyverno.github.io/kyverno/"
     condition: kyverno.enabled
