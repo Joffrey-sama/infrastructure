@@ -309,6 +309,11 @@ def get_config(args):
         load_env_file(args.config)
     elif os.getenv("CROSS_SEED_CONFIG_PATH"):
         load_env_file(os.getenv("CROSS_SEED_CONFIG_PATH"))
+    else:
+        for default_conf in ["configs/cross-seed-finder.conf", "cross-seed-finder.conf", "configs/cross-seed-finder.env"]:
+            if os.path.isfile(default_conf):
+                load_env_file(default_conf)
+                break
 
     prowlarr_url = (
         args.prowlarr_url
