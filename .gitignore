@@ -64,3 +64,6 @@ __pycache__/
 .vscode/
 *.swp
 *.swo
+
+# Output JSON files
+cross_seed_opportunities.json
