@@ -1,10 +1,7 @@
 ---
 - name: Install storage management tools
   ansible.builtin.package:
-    name:
-      - parted
-      - xfsprogs
-      - lvm2
+    name: "{{ storage_packages }}"
     state: present
 
 - name: Configure disk partitions

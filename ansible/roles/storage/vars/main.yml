@@ -1,0 +1,12 @@
+---
+lvm2_version: "2.03.16-*"
+parted_version: "3.6-*"
+xfsprogs_version: "6.6.0-*"
+
+storage_packages:
+  - "lvm2={{ lvm2_version }}"
+  - "parted={{ parted_version }}"
+  - "xfsprogs={{ xfsprogs_version }}"
+
+storage_default_fstype: "ext4"
+storage_default_label_type: "gpt"

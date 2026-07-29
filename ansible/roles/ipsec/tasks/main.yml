@@ -1,9 +1,7 @@
 ---
 - name: Install VPN tools
   ansible.builtin.apt:
-    name:
-      - strongswan
-      - strongswan-pki
+    name: "{{ ipsec_packages }}"
     state: present
 
 - name: Enable IP Forwarding
