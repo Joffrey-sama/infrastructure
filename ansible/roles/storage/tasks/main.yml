@@ -1,4 +1,7 @@
 ---
+- name: Include OS-specific variables
+  ansible.builtin.include_vars: "{{ ansible_distribution }}.yml"
+
 - name: Install storage management tools
   ansible.builtin.package:
     name: "{{ storage_packages }}"

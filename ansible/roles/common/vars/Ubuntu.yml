@@ -1,0 +1,21 @@
+---
+target_os: "ubuntu_24_04"
+
+ca_certificates_pkg_version: "20260601~24.04.1*"
+curl_pkg_version: "8.5.0-*"
+git_pkg_version: "1:2.43.0-*"
+htop_pkg_version: "3.3.0-*"
+tar_pkg_version: "1.35+dfsg-*"
+ufw_pkg_version: "0.36.2-*"
+unzip_pkg_version: "6.0-*"
+wget_pkg_version: "1.21.4-*"
+
+system_packages:
+  - "ca-certificates={{ ca_certificates_pkg_version }}"
+  - "curl={{ curl_pkg_version }}"
+  - "git={{ git_pkg_version }}"
+  - "htop={{ htop_pkg_version }}"
+  - "tar={{ tar_pkg_version }}"
+  - "ufw={{ ufw_pkg_version }}"
+  - "unzip={{ unzip_pkg_version }}"
+  - "wget={{ wget_pkg_version }}"
