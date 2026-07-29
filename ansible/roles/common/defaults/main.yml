@@ -1,0 +1,7 @@
+---
+common_allowed_tcp_ports:
+  - "80"
+  - "443"
+  - "53"
+common_allowed_udp_ports:
+  - "53"

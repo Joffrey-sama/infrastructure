@@ -66,12 +66,28 @@
       ]
     },
     {
-      "matchManagers": ["ansible", "ansible-galaxy"],
+      "matchManagers": ["ansible", "ansible-galaxy", "custom.regex"],
+      "addLabels": ["renovate", "ansible"]
+    },
+    {
+      "matchManagers": ["custom.regex"],
+      "matchUpdateTypes": ["patch", "digest"],
+      "groupName": "ansible patch updates",
       "addLabels": ["renovate", "ansible"]
     },
     {
       "matchManagers": ["kubernetes"],
       "addLabels": ["renovate", "kubernetes"]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^ansible/roles/.*/(vars|defaults)/main\\.yml$/"],
+      "matchStrings": [
+        "(?<depName>[a-zA-Z0-9_-]+)_version:\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "github-releases"
     }
   ]
 }

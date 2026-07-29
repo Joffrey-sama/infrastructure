@@ -95,6 +95,7 @@
             path: "{{ lookup('env', 'HOME') }}/.kube"
             state: directory
             mode: '0700'
+          become: false
 
         - name: Save K3s kubeconfig to a temporary file (renaming context to k3s)
           ansible.builtin.copy:

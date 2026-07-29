@@ -1,0 +1,10 @@
+---
+strongswan_version: "5.9.13-*"
+strongswan_pki_version: "5.9.13-*"
+
+ipsec_packages:
+  - "strongswan={{ strongswan_version }}"
+  - "strongswan-pki={{ strongswan_pki_version }}"
+
+ipsec_secrets_file: "/etc/ipsec.secrets"
+ipsec_conf_file: "/etc/ipsec.conf"
