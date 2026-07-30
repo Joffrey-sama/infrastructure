@@ -67,7 +67,15 @@
     },
     {
       "matchManagers": ["ansible", "ansible-galaxy", "custom.regex"],
-      "addLabels": ["renovate", "ansible"]
+      "addLabels": ["renovate", "ansible"],
+      "bumpVersions": [
+        {
+          "name": "Bump collection version",
+          "filePatterns": ["ansible/galaxy.yml"],
+          "matchStrings": ["(?:^|\\n)version:\\s*\"?(?<version>[0-9.]+)\"?"],
+          "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
+        }
+      ]
     },
     {
       "matchManagers": ["custom.regex"],
