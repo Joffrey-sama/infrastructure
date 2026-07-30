@@ -152,9 +152,10 @@ jobs:
           MODE="${{ inputs.mode || 'check' }}"
           if [ -n "$PLAYBOOK" ]; then
             if [ "$MODE" = "check" ]; then
-              echo "=== Running Ansible Syntax Check for ${PLAYBOOK} ==="
-              ansible-playbook "${PLAYBOOK}" --syntax-check
+              echo "=== Running Ansible Check for ${PLAYBOOK} on ${INVENTORY} ==="
+              ansible-playbook -i "${INVENTORY}" "${PLAYBOOK}" --syntax-check
             else
-              echo "Executing playbook ${PLAYBOOK} in mode ${MODE}"
+              echo "Executing playbook ${PLAYBOOK} on ${INVENTORY} in mode ${MODE}"
+              ansible-playbook -i "${INVENTORY}" "${PLAYBOOK}" --check --diff
             fi
           fi
