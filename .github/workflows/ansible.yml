@@ -15,6 +15,11 @@ on:
   pull_request:
   workflow_call:
     inputs:
+      build_collection:
+        description: "Enable Ansible collection build and galaxy validation"
+        required: false
+        type: boolean
+        default: false
       playbook:
         description: "Path to Ansible playbook file in infrastructure repository"
         required: true
@@ -36,7 +41,7 @@ permissions:
 jobs:
   ansible-ci:
     name: "Ansible Lint, Build & Version Guard"
-    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: inputs.build_collection == true || (github.event_name != 'workflow_call' && (github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
@@ -130,19 +135,24 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: "Install Ansible"
+      - name: "Install Ansible & Requirements"
         run: |
           python -m pip install --upgrade pip
           pip install ansible ansible-lint
+          if [ -f "ansible/requirements.yml" ]; then
+            ansible-galaxy install -r ansible/requirements.yml || true
+          fi
 
       - name: "Ansible Execution (${{ inputs.mode || 'check' }})"
         env:
           ANSIBLE_ROLES_PATH: "ansible/roles"
         run: |
           PLAYBOOK="${{ inputs.playbook }}"
+          INVENTORY="${{ inputs.inventory || 'ansible/inventory/hosts.yml' }}"
           MODE="${{ inputs.mode || 'check' }}"
           if [ -n "$PLAYBOOK" ]; then
             if [ "$MODE" = "check" ]; then
+              echo "=== Running Ansible Syntax Check for ${PLAYBOOK} ==="
               ansible-playbook "${PLAYBOOK}" --syntax-check
             else
               echo "Executing playbook ${PLAYBOOK} in mode ${MODE}"
