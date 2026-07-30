@@ -88,7 +88,7 @@
         "target_os:\\s*\"(?<target_os>[^\"]+)\"[\\s\\S]*?(?<depName>[a-zA-Z0-9_-]+)_pkg_version:\\s*\"(?<currentValue>[^\"]+)\""
       ],
       "datasourceTemplate": "repology",
-      "packageNameTemplate": "{{target_os}}/{{depName}}"
+      "packageNameTemplate": "{{target_os}}/{{replace '_' '-' depName}}"
     },
     {
       "customType": "regex",
