@@ -67,7 +67,15 @@
     },
     {
       "matchManagers": ["ansible", "ansible-galaxy", "custom.regex"],
-      "addLabels": ["renovate", "ansible"]
+      "addLabels": ["renovate", "ansible"],
+      "bumpVersions": [
+        {
+          "name": "Bump collection version",
+          "filePatterns": ["ansible/galaxy.yml"],
+          "matchStrings": ["(?:^|\\n)version:\\s*\"?(?<version>[0-9.]+)\"?"],
+          "bumpType": "{{#if isMajor}}major{{else if isMinor}}minor{{else}}patch{{/if}}"
+        }
+      ]
     },
     {
       "matchManagers": ["custom.regex"],
@@ -88,7 +96,7 @@
         "target_os:\\s*\"(?<target_os>[^\"]+)\"[\\s\\S]*?(?<depName>[a-zA-Z0-9_-]+)_pkg_version:\\s*\"(?<currentValue>[^\"]+)\""
       ],
       "datasourceTemplate": "repology",
-      "packageNameTemplate": "{{target_os}}/{{depName}}"
+      "packageNameTemplate": "{{target_os}}/{{replace '_' '-' depName}}"
     },
     {
       "customType": "regex",
