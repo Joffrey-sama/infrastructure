@@ -41,7 +41,7 @@ permissions:
 jobs:
   ansible-ci:
     name: "Ansible Lint, Build & Version Guard"
-    if: inputs.build_collection == true || (github.event_name != 'workflow_call' && (github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
+    if: inputs.build_collection == true
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
