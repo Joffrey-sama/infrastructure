@@ -1,0 +1,11 @@
+---
+target_os: "ubuntu_24_04"
+
+lvm2_pkg_version: "2.03.16-*"
+parted_pkg_version: "3.6-*"
+xfsprogs_pkg_version: "6.6.0-*"
+
+storage_packages:
+  - "lvm2={{ lvm2_pkg_version }}"
+  - "parted={{ parted_pkg_version }}"
+  - "xfsprogs={{ xfsprogs_pkg_version }}"

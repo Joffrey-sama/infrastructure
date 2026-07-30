@@ -1,4 +1,7 @@
 ---
+- name: Include OS-specific variables
+  ansible.builtin.include_vars: "{{ ansible_distribution }}.yml"
+
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: true
@@ -11,18 +14,18 @@
 
 - name: Configure passwordless sudo for ansible_user
   ansible.builtin.lineinfile:
-    path: "/etc/sudoers.d/90-{{ ansible_user }}" # Use a file name based on the user
+    path: "/etc/sudoers.d/90-{{ ansible_user | default(ansible_env.USER | default('ansible')) }}" # Use a file name based on the user
     create: true
     mode: '0440'
     owner: root
     group: root
-    line: "{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL"
+    line: "{{ ansible_user | default(ansible_env.USER | default('ansible')) }} ALL=(ALL) NOPASSWD: ALL"
     validate: 'visudo -cf %s' # Validate syntax before writing
-  when: ansible_become_method == 'sudo' # Only apply if using sudo
+  when: (ansible_become_method | default('sudo')) == 'sudo' and (ansible_user | default('')) != '' # Only apply if using sudo and user defined
 
 - name: Ensure authorized SSH keys are present
   ansible.posix.authorized_key:
-    user: "{{ ansible_user }}"
+    user: "{{ ansible_user | default(ansible_env.USER | default('ansible')) }}"
     state: present
     key: "{{ item }}"
   loop: "{{ authorized_ssh_keys | default([]) }}"

@@ -71,7 +71,7 @@
     },
     {
       "matchManagers": ["custom.regex"],
-      "matchUpdateTypes": ["patch", "digest"],
+      "matchUpdateTypes": ["patch", "digest", "minor"],
       "groupName": "ansible patch updates",
       "addLabels": ["renovate", "ansible"]
     },
@@ -83,11 +83,19 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^ansible/roles/.*/(vars|defaults)/main\\.yml$/"],
+      "managerFilePatterns": ["/^ansible/roles/.*/vars/.*\\.yml$/"],
       "matchStrings": [
-        "(?<depName>[a-zA-Z0-9_-]+)_version:\\s*\"(?<currentValue>[^\"]+)\""
+        "target_os:\\s*\"(?<target_os>[^\"]+)\"[\\s\\S]*?(?<depName>[a-zA-Z0-9_-]+)_pkg_version:\\s*\"(?<currentValue>[^\"]+)\""
       ],
-      "datasourceTemplate": "github-releases"
+      "datasourceTemplate": "repology",
+      "packageNameTemplate": "{{target_os}}/{{depName}}"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^ansible/roles/.*/vars/.*\\.yml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) packageName=(?<packageName>[^\\s]+?)(?:\\n|\\s+)[a-zA-Z0-9_-]+_version:\\s*\"(?<currentValue>[^\"]+)\""
+      ]
     }
   ]
 }

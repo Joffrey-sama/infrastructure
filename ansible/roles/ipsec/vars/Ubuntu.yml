@@ -1,0 +1,9 @@
+---
+target_os: "ubuntu_24_04"
+
+strongswan_pkg_version: "5.9.13-*"
+strongswan_pki_pkg_version: "5.9.13-*"
+
+ipsec_packages:
+  - "strongswan={{ strongswan_pkg_version }}"
+  - "strongswan-pki={{ strongswan_pki_pkg_version }}"
