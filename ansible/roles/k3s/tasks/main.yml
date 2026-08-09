@@ -71,6 +71,8 @@
   tags: [kubeconfig, kubeconfig-control]
   delegate_to: localhost
   become: false
+  vars:
+    ansible_become: false
   run_once: true # Ensures this block runs only once
   block:
     - name: Check if remote kubeconfig exists on the managed node
@@ -82,6 +84,9 @@
 
     - name: Proceed with fetching and configuring kubeconfig on control node
       when: remote_kubeconfig_stat.stat.exists
+      become: false
+      vars:
+        ansible_become: false
       block:
         - name: Read remote kubeconfig content
           ansible.builtin.command: "sudo cat /etc/rancher/k3s/k3s.yaml"
@@ -95,21 +100,23 @@
             path: "{{ lookup('env', 'HOME') }}/.kube"
             state: directory
             mode: '0700'
+          delegate_to: localhost
           become: false
 
         - name: Save K3s kubeconfig to a temporary file (renaming context to k3s)
           ansible.builtin.copy:
             content: >-
-              {{ remote_kubeconfig_content.stdout 
-              | replace('127.0.0.1', ansible_host) 
-              | replace('0.0.0.0', ansible_host) 
-              | replace('name: default', 'name: k3s') 
-              | replace('cluster: default', 'cluster: k3s') 
-              | replace('user: default', 'user: k3s') 
-              | replace('current-context: default', 'current-context: k3s') 
-              }}
+              {{ remote_kubeconfig_content.stdout
+              | replace('127.0.0.1', ansible_host)
+              | replace('0.0.0.0', ansible_host)
+              | replace('name: default', 'name: k3s')
+              | replace('cluster: default', 'cluster: k3s')
+              | replace('user: default', 'user: k3s')
+              | replace('current-context: default', 'current-context: k3s') }}
             dest: "{{ lookup('env', 'HOME') }}/.kube/k3s_config_temp"
             mode: '0600'
+          delegate_to: localhost
+          become: false
 
         - name: Merge K3s config into main kubeconfig
           ansible.builtin.shell: |
@@ -125,6 +132,8 @@
             rm -f "$TEMP_CONFIG"
           args:
             executable: /bin/bash
+          delegate_to: localhost
+          become: false
 
     - name: Notify if remote kubeconfig does not exist
       ansible.builtin.debug:
