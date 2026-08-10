@@ -64,3 +64,6 @@ __pycache__/
 .vscode/
 *.swp
 *.swo
+
+# Local agent settings
+.agents/
