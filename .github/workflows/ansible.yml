@@ -134,21 +134,6 @@ jobs:
       - name: "Checkout Code"
         uses: actions/checkout@v4
 
-      - name: "Checkout Infrastructure Repository"
-        if: github.repository != 'Joffrey-sama/infrastructure'
-        uses: actions/checkout@v4
-        with:
-          repository: 'Joffrey-sama/infrastructure'
-          ref: ${{ github.action_ref || 'main' }}
-          path: '.infrastructure-temp'
-
-      - name: "Merge Infrastructure with Ops Configuration"
-        if: github.repository != 'Joffrey-sama/infrastructure'
-        run: |
-          echo "=== Merging Infrastructure repository with Ops config ==="
-          cp -r .infrastructure-temp/. .
-          rm -rf .infrastructure-temp
-
       - name: "Setup Python"
         uses: actions/setup-python@v5
         with:
