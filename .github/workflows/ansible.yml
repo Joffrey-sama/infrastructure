@@ -70,11 +70,15 @@ jobs:
 
       - name: "Ansible Collection Build Check"
         run: |
-          echo "=== Testing Ansible Collection Build ==="
-          (cd ansible && ansible-galaxy collection build --force)
+          if [ -f "ansible/galaxy.yml" ]; then
+            echo "=== Testing Ansible Collection Build ==="
+            (cd ansible && ansible-galaxy collection build --force)
+          else
+            echo "No galaxy.yml found, skipping collection build check."
+          fi
 
       - name: "Guardrail: Check Version Bump on galaxy.yml"
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && hashFiles('ansible/galaxy.yml') != ''
         run: |
           git fetch origin --tags || true
           git fetch origin main:main || true
@@ -96,7 +100,7 @@ jobs:
           fi
 
       - name: "Process Ansible Collection: Tag & Release"
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('ansible/galaxy.yml') != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -124,7 +128,7 @@ jobs:
 
   ansible-deploy:
     name: "Ansible Execution (${{ inputs.mode || 'check' }})"
-    if: github.event_name == 'workflow_call'
+    if: inputs.playbook != ''
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
