@@ -155,11 +155,14 @@ jobs:
           INVENTORY="${{ inputs.inventory || 'ansible/inventory/hosts.yml' }}"
           MODE="${{ inputs.mode || 'check' }}"
           if [ -n "$PLAYBOOK" ]; then
-            if [ "$MODE" = "check" ]; then
-              echo "=== Running Ansible Check for ${PLAYBOOK} on ${INVENTORY} ==="
+            if [ "$MODE" = "syntax" ]; then
+              echo "=== Running Ansible Syntax Check for ${PLAYBOOK} on ${INVENTORY} ==="
               ansible-playbook -i "${INVENTORY}" "${PLAYBOOK}" --syntax-check
-            else
-              echo "Executing playbook ${PLAYBOOK} on ${INVENTORY} in mode ${MODE}"
+            elif [ "$MODE" = "check" ]; then
+              echo "=== Running Ansible Dry Run (--check --diff) for ${PLAYBOOK} on ${INVENTORY} ==="
               ansible-playbook -i "${INVENTORY}" "${PLAYBOOK}" --check --diff
+            else
+              echo "=== Executing playbook ${PLAYBOOK} on ${INVENTORY} in mode ${MODE} (PROD) ==="
+              ansible-playbook -i "${INVENTORY}" "${PLAYBOOK}"
             fi
           fi
