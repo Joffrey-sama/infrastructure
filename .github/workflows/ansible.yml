@@ -34,6 +34,11 @@ on:
         required: false
         type: string
         default: "check"
+      runner:
+        description: "Runner label or scale set name"
+        required: false
+        type: string
+        default: "ubuntu-latest"
 
 permissions:
   contents: write
@@ -129,7 +134,7 @@ jobs:
   ansible-deploy:
     name: "Ansible Execution (${{ inputs.mode || 'check' }})"
     if: inputs.playbook != ''
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     steps:
       - name: "Checkout Code"
         uses: actions/checkout@v4
