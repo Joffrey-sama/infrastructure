@@ -152,6 +152,21 @@ jobs:
             ansible-galaxy install -r ansible/requirements.yml || true
           fi
 
+      - name: "Setup SSH Known Hosts"
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          INVENTORY="${{ inputs.inventory || 'ansible/inventory/hosts.yml' }}"
+          if [ -f "$INVENTORY" ]; then
+            echo "=== Extracting target IPs from inventory ${INVENTORY} ==="
+            TARGET_HOSTS=$(grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' "$INVENTORY" | sort -u)
+            for host in $TARGET_HOSTS; do
+              echo "Scanning SSH host key for ${host}..."
+              ssh-keyscan -H "$host" >> ~/.ssh/known_hosts 2>/dev/null || true
+            done
+            chmod 600 ~/.ssh/known_hosts
+          fi
+
       - name: "Ansible Execution (${{ inputs.mode || 'check' }})"
         env:
           ANSIBLE_ROLES_PATH: "ansible/roles"
