@@ -69,6 +69,7 @@
 # Configure kubectl on the Ansible control node
 - name: Configure kubectl on Ansible control node for the K3s cluster
   tags: [kubeconfig, kubeconfig-control]
+  when: k3s_configure_control_node | default(false)
   delegate_to: localhost
   become: false
   vars:
