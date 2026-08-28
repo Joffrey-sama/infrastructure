@@ -3,11 +3,6 @@
 # - GreptimeDB datasource for metrics
 # - Community dashboards for comprehensive cluster monitoring
 
-terraform {
-  backend "local" {
-    path = "terraform.tfstate"
-  }
-}
 
 output "grafana_folder_id" {
   description = "Grafana folder ID for imported dashboards"
