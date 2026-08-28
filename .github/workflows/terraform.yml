@@ -136,8 +136,11 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: "eu-paris-1"
+      AWS_REGION: "eu-paris-1"
       AWS_REQUEST_CHECKSUM_CALCULATION: "WHEN_REQUIRED"
       AWS_RESPONSE_CHECKSUM_VALIDATION: "WHEN_REQUIRED"
+      TF_IN_AUTOMATION: "true"
       TF_VAR_authentik_token: ${{ secrets.AUTHENTIK_TOKEN }}
       TF_VAR_initial_admin_password: ${{ secrets.INITIAL_ADMIN_PASSWORD }}
       TF_VAR_ldap_bind_password: ${{ secrets.LDAP_BIND_PASSWORD }}
@@ -162,6 +165,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.7.0"
+          terraform_wrapper: false
 
       - name: "Setup OCI CLI & Config"
         if: env.AWS_ACCESS_KEY_ID != '' && env.OCI_USER_OCID != ''
@@ -186,20 +190,20 @@ jobs:
       - name: "Terraform Init"
         working-directory: infra/${{ inputs.module_dir }}
         run: |
-          BACKEND_CONF="../../../../ops/${{ inputs.ops_dir }}/backend.hcl"
+          BACKEND_CONF="${GITHUB_WORKSPACE}/ops/${{ inputs.ops_dir }}/backend.hcl"
           if [ -f "$BACKEND_CONF" ]; then
-            terraform init -backend-config="$BACKEND_CONF"
+            terraform init -input=false -backend-config="$BACKEND_CONF"
           else
-            terraform init -backend=false
+            terraform init -input=false -backend=false
           fi
 
       - name: "Terraform Plan / Apply"
         working-directory: infra/${{ inputs.module_dir }}
         run: |
-          TFVARS="../../../../ops/${{ inputs.ops_dir }}/${{ inputs.tfvars_file }}"
+          TFVARS="${GITHUB_WORKSPACE}/ops/${{ inputs.ops_dir }}/${{ inputs.tfvars_file }}"
           MODE="${{ inputs.mode || 'plan' }}"
           if [ "$MODE" = "apply" ]; then
-            terraform apply -auto-approve -var-file="$TFVARS"
+            terraform apply -input=false -auto-approve -var-file="$TFVARS"
           else
-            terraform plan -var-file="$TFVARS"
+            terraform plan -input=false -var-file="$TFVARS"
           fi
