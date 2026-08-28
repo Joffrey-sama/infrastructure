@@ -9,12 +9,16 @@ on:
   pull_request:
   workflow_call:
     inputs:
-      directory:
-        description: "Directory containing Terraform configuration"
+      module_dir:
+        description: "Path to module directory in infrastructure repo (e.g. terraform/modules/oci-oke)"
+        required: true
+        type: string
+      ops_dir:
+        description: "Path to environment directory in delva-home-ops repo (e.g. terraform/cluster/oci-oke)"
         required: true
         type: string
       tfvars_file:
-        description: "Path to tfvars file relative to directory"
+        description: "Path to tfvars file relative to ops_dir"
         required: false
         type: string
         default: "prod.tfvars"
@@ -23,14 +27,20 @@ on:
         required: false
         type: string
         default: "plan"
+      runner:
+        description: "Runner label or scale set name"
+        required: false
+        type: string
+        default: "ubuntu-latest"
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   terraform-ci:
     name: "Terraform Lint, Validate & Version Guard"
-    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.repository == 'Joffrey-sama/infrastructure' && (github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
@@ -121,20 +131,75 @@ jobs:
 
   terraform-deploy:
     name: "Terraform Execution (${{ inputs.mode || 'plan' }})"
-    if: github.event_name == 'workflow_call'
-    runs-on: ubuntu-latest
+    if: inputs.module_dir != ''
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REQUEST_CHECKSUM_CALCULATION: "WHEN_REQUIRED"
+      AWS_RESPONSE_CHECKSUM_VALIDATION: "WHEN_REQUIRED"
+      TF_VAR_authentik_token: ${{ secrets.AUTHENTIK_TOKEN }}
+      TF_VAR_initial_admin_password: ${{ secrets.INITIAL_ADMIN_PASSWORD }}
+      TF_VAR_ldap_bind_password: ${{ secrets.LDAP_BIND_PASSWORD }}
+      TF_VAR_grafana_client_secret: ${{ secrets.GRAFANA_CLIENT_SECRET }}
+      TF_VAR_headscale_client_secret: ${{ secrets.HEADSCALE_CLIENT_SECRET }}
+      TF_VAR_headlamp_client_secret: ${{ secrets.HEADLAMP_CLIENT_SECRET }}
+      TF_VAR_homarr_client_secret: ${{ secrets.HOMARR_CLIENT_SECRET }}
+      TF_VAR_grafana_api_token: ${{ secrets.GRAFANA_API_TOKEN }}
     steps:
-      - name: "Checkout Code"
+      - name: "Checkout Ops Config (Calling Repo)"
         uses: actions/checkout@v4
+        with:
+          path: ops
+
+      - name: "Checkout Public Infrastructure Modules"
+        uses: actions/checkout@v4
+        with:
+          repository: Joffrey-sama/infrastructure
+          path: infra
 
       - name: "Setup Terraform"
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.7.0"
 
-      - name: "Terraform Init & Validate"
+      - name: "Setup OCI CLI & Config"
+        if: env.AWS_ACCESS_KEY_ID != '' && env.OCI_USER_OCID != ''
+        env:
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_KEY_CONTENT: ${{ secrets.OCI_KEY_CONTENT }}
         run: |
-          DIR="${{ inputs.directory }}"
-          if [ -n "$DIR" ] && [ -d "$DIR" ]; then
-            (cd "$DIR" && terraform init -backend=false && terraform validate)
+          mkdir -p ~/.oci
+          cat <<EOF > ~/.oci/config
+          [DEFAULT]
+          user=${OCI_USER_OCID}
+          fingerprint=${OCI_FINGERPRINT}
+          tenancy=${OCI_TENANCY_OCID}
+          region=eu-paris-1
+          key_file=~/.oci/oci_api_key.pem
+          EOF
+          echo "${OCI_KEY_CONTENT}" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem ~/.oci/config
+
+      - name: "Terraform Init"
+        working-directory: infra/${{ inputs.module_dir }}
+        run: |
+          BACKEND_CONF="../../../../ops/${{ inputs.ops_dir }}/backend.hcl"
+          if [ -f "$BACKEND_CONF" ]; then
+            terraform init -backend-config="$BACKEND_CONF"
+          else
+            terraform init -backend=false
+          fi
+
+      - name: "Terraform Plan / Apply"
+        working-directory: infra/${{ inputs.module_dir }}
+        run: |
+          TFVARS="../../../../ops/${{ inputs.ops_dir }}/${{ inputs.tfvars_file }}"
+          MODE="${{ inputs.mode || 'plan' }}"
+          if [ "$MODE" = "apply" ]; then
+            terraform apply -auto-approve -var-file="$TFVARS"
+          else
+            terraform plan -var-file="$TFVARS"
           fi
