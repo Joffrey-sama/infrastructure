@@ -160,6 +160,7 @@ jobs:
         with:
           repository: Joffrey-sama/infrastructure
           path: infra
+          clean: false
 
       - name: "Setup Terraform"
         uses: hashicorp/setup-terraform@v3
@@ -192,9 +193,12 @@ jobs:
         run: |
           BACKEND_CONF="${GITHUB_WORKSPACE}/ops/${{ inputs.ops_dir }}/backend.hcl"
           if [ -f "$BACKEND_CONF" ]; then
+            echo "Using backend config: $BACKEND_CONF"
             terraform init -input=false -backend-config="$BACKEND_CONF"
           else
-            terraform init -input=false -backend=false
+            echo "ERROR: Backend config not found at $BACKEND_CONF"
+            ls -la "${GITHUB_WORKSPACE}/ops" || true
+            exit 1
           fi
 
       - name: "Terraform Plan / Apply"
