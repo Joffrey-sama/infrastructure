@@ -37,23 +37,6 @@ variable "ssh_public_key_path" {
   default     = ""
 }
 
-variable "cloud_vpn_endpoint" {
-  description = "Cloud VPN endpoint IP"
-  type        = string
-  default     = ""
-}
-
-variable "oidc_issuer_url" {
-  description = "OIDC issuer URL for Kubernetes API server"
-  type        = string
-  default     = ""
-}
-
-variable "oidc_client_id" {
-  description = "OIDC client ID for Kubernetes API server"
-  type        = string
-  default     = ""
-}
 
 
 
