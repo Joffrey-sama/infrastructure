@@ -99,7 +99,7 @@ resource "oci_containerengine_node_pool" "node_pool" {
     value = "free-tier"
   }
 
-  ssh_public_key = file(var.ssh_public_key_path)
+  ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : (var.ssh_public_key_path != "" && fileexists(var.ssh_public_key_path) ? file(var.ssh_public_key_path) : null)
 }
 
 # ========================================

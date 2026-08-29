@@ -25,11 +25,36 @@ variable "node_pool_size" {
   }
 }
 
+variable "ssh_public_key" {
+  description = "Direct SSH public key string (takes precedence over ssh_public_key_path)"
+  type        = string
+  default     = ""
+}
+
 variable "ssh_public_key_path" {
   description = "Path to the SSH public key file"
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
+  default     = ""
 }
+
+variable "cloud_vpn_endpoint" {
+  description = "Cloud VPN endpoint IP"
+  type        = string
+  default     = ""
+}
+
+variable "oidc_issuer_url" {
+  description = "OIDC issuer URL for Kubernetes API server"
+  type        = string
+  default     = ""
+}
+
+variable "oidc_client_id" {
+  description = "OIDC client ID for Kubernetes API server"
+  type        = string
+  default     = ""
+}
+
 
 
 # --- Cloud Configuration ---
