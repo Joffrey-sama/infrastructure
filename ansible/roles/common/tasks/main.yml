@@ -36,6 +36,16 @@
     state: enabled
     policy: allow # Default policy for outgoing traffic
 
+- name: Allow incoming SSH traffic for authorized sources
+  community.general.ufw:
+    rule: allow
+    port: '22'
+    proto: tcp
+    from_ip: "{{ item.src | default(item) }}"
+    comment: "{{ item.comment | default('Allow SSH access') }}"
+  loop: "{{ authorized_ssh_sources | default([]) }}"
+
+
 - name: Allow incoming HTTP traffic for Gateway LoadBalancer
   community.general.ufw:
     rule: allow
