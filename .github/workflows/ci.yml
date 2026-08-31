@@ -5,7 +5,11 @@ on:
   push:
     paths:
       - ".github/workflows/**"
+      - "renovate.json"
   pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "renovate.json"
 
 permissions:
   contents: write

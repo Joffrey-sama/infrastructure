@@ -5,8 +5,10 @@ on:
   push:
     paths:
       - "terraform/**"
-      - ".github/workflows/terraform.yml"
   pull_request:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
   workflow_call:
     inputs:
       module_dir:

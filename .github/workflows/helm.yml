@@ -11,8 +11,10 @@ on:
   push:
     paths:
       - "kubernetes/charts/**"
-      - ".github/workflows/helm.yml"
   pull_request:
+    paths:
+      - "kubernetes/charts/**"
+      - ".github/workflows/helm.yml"
 
 permissions:
   contents: write
