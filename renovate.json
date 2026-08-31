@@ -104,6 +104,13 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+?) packageName=(?<packageName>[^\\s]+?)(?:\\n|\\s+)[a-zA-Z0-9_-]+_version:\\s*\"(?<currentValue>[^\"]+)\""
       ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^terraform/modules/.*variables\\.tf$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) packageName=(?<packageName>[^\\s]+?)(?:\\n|\\s+)variable\\s+\"[a-zA-Z0-9_-]+\"\\s+{[\\s\\S]*?default\\s+=\\s+\"(?<currentValue>[^\"]+)\""
+      ]
     }
   ]
 }
