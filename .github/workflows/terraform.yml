@@ -145,7 +145,6 @@ jobs:
       TF_VAR_initial_admin_password: ${{ secrets.INITIAL_ADMIN_PASSWORD }}
       TF_VAR_ldap_bind_password: ${{ secrets.LDAP_BIND_PASSWORD }}
       TF_VAR_grafana_client_secret: ${{ secrets.GRAFANA_CLIENT_SECRET }}
-      TF_VAR_headscale_client_secret: ${{ secrets.HEADSCALE_CLIENT_SECRET }}
       TF_VAR_headlamp_client_secret: ${{ secrets.HEADLAMP_CLIENT_SECRET }}
       TF_VAR_homarr_client_secret: ${{ secrets.HOMARR_CLIENT_SECRET }}
       TF_VAR_grafana_api_token: ${{ secrets.GRAFANA_API_TOKEN }}
