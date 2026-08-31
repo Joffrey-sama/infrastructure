@@ -34,10 +34,6 @@ variable "grafana_redirect_uri" {
   type = string
 }
 
-variable "headscale_redirect_uri" {
-  type = string
-}
-
 variable "headlamp_redirect_uri" {
   type = string
 }
@@ -47,15 +43,11 @@ variable "grafana_client_secret" {
   sensitive = true
 }
 
-variable "headscale_client_secret" {
-  type      = string
-  sensitive = true
-}
-
 variable "headlamp_client_secret" {
   type      = string
   sensitive = true
 }
+
 
 variable "homarr_client_secret" {
   type      = string
