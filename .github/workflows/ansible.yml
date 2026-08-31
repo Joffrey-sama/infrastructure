@@ -151,7 +151,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible ansible-lint
           if [ -f "ansible/requirements.yml" ]; then
-            ansible-galaxy install -r ansible/requirements.yml || true
+            ansible-galaxy collection install -r ansible/requirements.yml || true
+            ansible-galaxy role install -r ansible/requirements.yml || true
+          else
+            ansible-galaxy collection install git+https://github.com/Joffrey-sama/infrastructure.git#/ansible
           fi
 
       - name: "Setup SSH Agent"
