@@ -9,10 +9,11 @@ variable "compartment_id" {
   type        = string
 }
 
+# renovate: datasource=github-releases packageName=kubernetes/kubernetes
 variable "kubernetes_version" {
   description = "Kubernetes version for the cluster"
   type        = string
-  default     = "v1.35.2"
+  default     = "v1.34.10"
 }
 
 variable "node_pool_size" {
