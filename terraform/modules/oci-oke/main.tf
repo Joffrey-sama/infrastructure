@@ -99,6 +99,12 @@ resource "oci_containerengine_node_pool" "node_pool" {
     value = "free-tier"
   }
 
+  node_pool_cycling_details {
+    is_node_cycling_enabled = true
+    maximum_surge           = "0"
+    maximum_unavailable     = "1"
+  }
+
   ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : (var.ssh_public_key_path != "" && fileexists(var.ssh_public_key_path) ? file(var.ssh_public_key_path) : null)
 }
 
