@@ -166,6 +166,42 @@ jobs:
             echo "Skipping OCI validation (secrets not configured)."
           fi
 
+      - name: "Validate Grafana Module Plan via Mock Vars"
+        run: |
+          echo "=== Executing Terraform Plan on grafana module (Mock Backend) ==="
+          TF_BIN=$(which -a terraform | grep -v '_temp' | head -n 1)
+          if [ -z "$TF_BIN" ] || [ ! -x "$TF_BIN" ]; then
+            TF_BIN="terraform"
+          fi
+          cat <<EOF > terraform/modules/grafana/backend_override.tf
+          terraform {
+            backend "local" {
+              path = "terraform.tfstate"
+            }
+          }
+          EOF
+          cat <<EOF > terraform/modules/grafana/mock.tfvars
+          grafana_url       = "http://localhost:3000"
+          grafana_api_token = "ci-mock-token"
+          prometheus_url    = "http://localhost:4000"
+          loki_url          = "http://localhost:4000"
+          import_dashboards = {}
+          EOF
+          pushd terraform/modules/grafana
+          "$TF_BIN" init -reconfigure -input=false
+          set +e
+          "$TF_BIN" plan -input=false -var-file=mock.tfvars
+          PLAN_RC=$?
+          set -e
+          rm -f backend_override.tf mock.tfvars terraform.tfstate* .terraform/terraform.tfstate
+          popd
+          if [ $PLAN_RC -ne 0 ] && [ $PLAN_RC -ne 2 ]; then
+            echo "Grafana Terraform plan failed with error exit code $PLAN_RC"
+            exit $PLAN_RC
+          else
+            echo "SUCCESS: Grafana Terraform plan validated successfully (exit code $PLAN_RC)."
+          fi
+
       - name: "Guardrail: Check Version Bump on Modified Modules"
         if: github.event_name == 'pull_request'
         run: |

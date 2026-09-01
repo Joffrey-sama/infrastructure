@@ -9,9 +9,26 @@
   "rebaseWhen": "behind-base-branch",
   "separateMajorMinor": true,
   "separateMinorPatch": true,
+  "separateMultipleMajor": true,
+  "separateMultipleMinor": true,
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "packageRules": [
+    {
+      "matchPackageNames": ["kubernetes/kubernetes", "k3s-io/k3s"],
+      "matchUpdateTypes": ["major"],
+      "allowedVersions": "<={{add major 1}}"
+    },
+    {
+      "matchPackageNames": ["kubernetes/kubernetes", "k3s-io/k3s"],
+      "matchUpdateTypes": ["minor"],
+      "allowedVersions": "<={{major}}.{{add minor 1}}"
+    },
+    {
+      "matchPackageNames": ["kubernetes/kubernetes"],
+      "matchUpdateTypes": ["patch"],
+      "allowedVersions": "<={{major}}.{{minor}}.{{add patch 1}}"
+    },
     {
       "matchPackageNames": ["/.*/"],
       "groupName": null,
