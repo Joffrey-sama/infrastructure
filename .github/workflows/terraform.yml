@@ -143,10 +143,14 @@ jobs:
           EOF
 
             echo "=== Executing Terraform Plan on oci-oke (Live OCI Read-Only) ==="
+            TF_BIN="${TERRAFORM_CLI_PATH}/terraform"
+            if [ ! -x "$TF_BIN" ]; then
+              TF_BIN="terraform"
+            fi
             pushd terraform/modules/oci-oke
-            terraform init -reconfigure -input=false
+            "$TF_BIN" init -reconfigure -input=false
             set +e
-            terraform plan -input=false -var-file=mock.tfvars
+            "$TF_BIN" plan -input=false -var-file=mock.tfvars
             PLAN_RC=$?
             set -e
             rm -f backend_override.tf mock.tfvars terraform.tfstate* .terraform/terraform.tfstate
