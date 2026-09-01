@@ -143,10 +143,11 @@ jobs:
           EOF
 
             echo "=== Executing Terraform Plan on oci-oke (Live OCI Read-Only) ==="
-            TF_BIN="${TERRAFORM_CLI_PATH}/terraform"
-            if [ ! -x "$TF_BIN" ]; then
+            TF_BIN=$(which -a terraform | grep -v '_temp' | head -n 1)
+            if [ -z "$TF_BIN" ] || [ ! -x "$TF_BIN" ]; then
               TF_BIN="terraform"
             fi
+            echo "Resolved Terraform binary: $TF_BIN"
             pushd terraform/modules/oci-oke
             "$TF_BIN" init -reconfigure -input=false
             set +e
