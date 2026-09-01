@@ -105,7 +105,7 @@ resource "oci_containerengine_node_pool" "node_pool" {
     maximum_unavailable     = "1"
   }
 
-  ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : (var.ssh_public_key_path != "" && fileexists(var.ssh_public_key_path) ? file(var.ssh_public_key_path) : null)
+  ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : try(file(var.ssh_public_key_path), null)
 }
 
 # ========================================
