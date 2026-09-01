@@ -145,13 +145,17 @@ jobs:
             echo "=== Executing Terraform Plan on oci-oke (Live OCI Read-Only) ==="
             pushd terraform/modules/oci-oke
             terraform init -reconfigure -input=false
+            set +e
             terraform plan -input=false -var-file=mock.tfvars
             PLAN_RC=$?
+            set -e
             rm -f backend_override.tf mock.tfvars terraform.tfstate* .terraform/terraform.tfstate
             popd
-            if [ $PLAN_RC -ne 0 ]; then
-              echo "Terraform plan failed with exit code $PLAN_RC"
+            if [ $PLAN_RC -ne 0 ] && [ $PLAN_RC -ne 2 ]; then
+              echo "Terraform plan failed with error exit code $PLAN_RC"
               exit $PLAN_RC
+            else
+              echo "SUCCESS: Terraform plan validated successfully (exit code $PLAN_RC)."
             fi
           else
             echo "Skipping OCI validation (secrets not configured)."
