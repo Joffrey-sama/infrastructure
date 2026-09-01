@@ -9,6 +9,7 @@ variable "compartment_id" {
   type        = string
 }
 
+# renovate: datasource=github-releases packageName=kubernetes/kubernetes
 variable "kubernetes_version" {
   description = "Kubernetes version for the cluster"
   type        = string

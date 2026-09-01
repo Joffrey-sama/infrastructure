@@ -71,6 +71,60 @@ jobs:
             (cd "${dir}" && terraform init -backend=false && terraform validate && tflint)
           done
 
+      - name: "Validate OKE Kubernetes Version Support via OCI Read-Only"
+        if: github.repository == 'Joffrey-sama/infrastructure' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+        env:
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_REGION: ${{ secrets.OCI_REGION || 'eu-paris-1' }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+        run: |
+          if [ -n "$OCI_USER_OCID" ] && [ -n "$OCI_PRIVATE_KEY" ]; then
+            echo "Running OCI OKE compatibility validation..."
+            mkdir -p ~/.oci
+            cat <<EOF > ~/.oci/config
+          [DEFAULT]
+          user=${OCI_USER_OCID}
+          fingerprint=${OCI_FINGERPRINT}
+          tenancy=${OCI_TENANCY_OCID}
+          region=${OCI_REGION}
+          key_file=~/.oci/oci_api_key.pem
+          EOF
+            echo "${OCI_PRIVATE_KEY}" > ~/.oci/oci_api_key.pem
+            chmod 600 ~/.oci/oci_api_key.pem ~/.oci/config
+
+            pip install oci > /dev/null 2>&1 || true
+            python3 - << 'PYEOF'
+          import os, sys, re, oci
+          try:
+              config = oci.config.from_file('~/.oci/config', 'DEFAULT')
+              ce_client = oci.container_engine.ContainerEngineClient(config)
+              options = ce_client.get_cluster_options(cluster_option_id='all').data
+              supported_k8s = options.kubernetes_versions
+              print(f"Supported OKE Kubernetes versions in {config['region']}: {supported_k8s}")
+
+              var_file = 'terraform/modules/oci-oke/variables.tf'
+              with open(var_file, 'r') as f:
+                  content = f.read()
+
+              match = re.search(r'variable\s+"kubernetes_version"\s+{[^}]*default\s*=\s*"([^"]+)"', content)
+              if match:
+                  target_version = match.group(1)
+                  print(f"Target OKE version in {var_file}: {target_version}")
+                  if target_version not in supported_k8s:
+                      print(f"::error file={var_file}::Kubernetes version '{target_version}' is NOT supported by OKE in {config['region']}! Supported versions are: {supported_k8s}")
+                      sys.exit(1)
+                  else:
+                      print(f"SUCCESS: Kubernetes version '{target_version}' is fully supported by OKE!")
+          except Exception as e:
+              print(f"Error during OCI verification: {e}")
+              sys.exit(1)
+          PYEOF
+          else
+            echo "Skipping OCI validation (secrets not configured)."
+          fi
+
       - name: "Guardrail: Check Version Bump on Modified Modules"
         if: github.event_name == 'pull_request'
         run: |
