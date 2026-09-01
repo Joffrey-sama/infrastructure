@@ -67,6 +67,7 @@
     },
     {
       "matchManagers": ["ansible", "ansible-galaxy", "custom.regex"],
+      "matchPaths": ["ansible/**"],
       "addLabels": ["renovate", "ansible"],
       "bumpVersions": [
         {
@@ -79,6 +80,7 @@
     },
     {
       "matchManagers": ["custom.regex"],
+      "matchPaths": ["ansible/**"],
       "matchUpdateTypes": ["patch", "digest", "minor"],
       "groupName": "ansible patch updates",
       "addLabels": ["renovate", "ansible"]
@@ -103,13 +105,6 @@
       "managerFilePatterns": ["/^ansible/roles/.*/vars/.*\\.yml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+?) packageName=(?<packageName>[^\\s]+?)(?:\\n|\\s+)[a-zA-Z0-9_-]+_version:\\s*\"(?<currentValue>[^\"]+)\""
-      ]
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["/^terraform/modules/.*variables\\.tf$/"],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-]+?) packageName=(?<packageName>[^\\s]+?)(?:\\n|\\s+)variable\\s+\"[a-zA-Z0-9_-]+\"\\s+{[\\s\\S]*?default\\s+=\\s+\"(?<currentValue>[^\"]+)\""
       ]
     }
   ]
