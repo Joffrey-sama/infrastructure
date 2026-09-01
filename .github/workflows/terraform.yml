@@ -124,6 +124,13 @@ jobs:
 
             # Run full Terraform Plan with dynamic mock vars
             echo "=== Generating dynamic mock vars for oci-oke plan ==="
+            cat <<EOF > terraform/modules/oci-oke/backend_override.tf
+          terraform {
+            backend "local" {
+              path = "terraform.tfstate"
+            }
+          }
+          EOF
             cat <<EOF > terraform/modules/oci-oke/mock.tfvars
           compartment_id     = "${OCI_TENANCY_OCID}"
           user_ocid          = "${OCI_USER_OCID}"
@@ -135,8 +142,8 @@ jobs:
           EOF
 
             echo "=== Executing Terraform Plan on oci-oke (Live OCI Read-Only) ==="
-            (cd terraform/modules/oci-oke && terraform plan -input=false -var-file=mock.tfvars)
-            rm -f terraform/modules/oci-oke/mock.tfvars
+            (cd terraform/modules/oci-oke && terraform init -reconfigure -input=false && terraform plan -input=false -var-file=mock.tfvars)
+            rm -f terraform/modules/oci-oke/backend_override.tf terraform/modules/oci-oke/mock.tfvars terraform/modules/oci-oke/terraform.tfstate*
           else
             echo "Skipping OCI validation (secrets not configured)."
           fi
