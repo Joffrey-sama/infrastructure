@@ -17,10 +17,7 @@
       "allowedVersions": "/^v?({{major}}\\.{{minor}}\\.{{add patch 1}}|{{major}}\\.{{add minor 1}}\\.0|{{add major 1}}\\.0\\.0)$/"
     },
     {
-      "matchPackageNames": [
-        "k3s-io/k3s"
-      ],
-      "separateMultipleMinor": true,
+      "matchPackageNames": ["k3s-io/k3s"],
       "allowedVersions": "<={{major}}.{{add minor 1}}"
     },
     {
