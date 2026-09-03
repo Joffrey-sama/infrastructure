@@ -91,7 +91,16 @@ jobs:
             ghcr.io/goauthentik/server:2026.2.0 server
 
           echo "Waiting for Authentik API to be ready..."
-          timeout 60 bash -c 'until curl -sf http://localhost:9000/api/v3/flows/instances/ -H "Authorization: Bearer ci-mock-token" > /dev/null; do sleep 2; done' || true
+          timeout 60 bash -c 'until curl -s http://localhost:9000/api/v3/core/applications/ > /dev/null; do sleep 2; done' || true
+
+          echo "Provisioning API token for akadmin..."
+          docker exec -e DJANGO_SETTINGS_MODULE=authentik.root.settings authentik-server python -c "
+          import django; django.setup()
+          from authentik.core.models import User, Token, TokenIntents
+          user = User.objects.filter(is_superuser=True).first() or User.objects.get(username='akadmin')
+          Token.objects.update_or_create(identifier='ci-mock-token', defaults={'user': user, 'key': 'ci-mock-token', 'intent': TokenIntents.INTENT_API})
+          print('Token created successfully for', user.username)
+          " || true
           echo "Authentik initialization completed."
 
       - name: "Setup OCI CLI & Validate OKE Version Support"
