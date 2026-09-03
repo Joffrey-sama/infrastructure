@@ -64,15 +64,37 @@ jobs:
       - name: "Terraform Format Check"
         run: terraform fmt -check -recursive terraform/
 
-      - name: "Terraform Validate & TFLint All Modules"
+      - name: "Start Ephemeral Authentik Server for Testing"
         run: |
-          tflint --init || true
-          find terraform/modules -mindepth 1 -maxdepth 1 -type d | while read -r dir; do
-            echo "=== Validating & Linting Terraform module: ${dir} ==="
-            (cd "${dir}" && terraform init -backend=false && terraform validate && tflint)
-          done
+          echo "Starting ephemeral Authentik test stack..."
+          docker network create authentik-net || true
+          docker run -d --name authentik-db --network authentik-net \
+            -e POSTGRES_DB=authentik \
+            -e POSTGRES_USER=authentik \
+            -e POSTGRES_PASSWORD=authentik \
+            postgres:16-alpine
 
-      - name: "Validate OKE Kubernetes Version Support via OCI Read-Only"
+          docker run -d --name authentik-redis --network authentik-net redis:alpine
+
+          docker run -d --name authentik-server --network authentik-net \
+            -p 9000:9000 \
+            -e AUTHENTIK_SECRET_KEY=ci-secret-key-1234567890 \
+            -e AUTHENTIK_POSTGRESQL__HOST=authentik-db \
+            -e AUTHENTIK_POSTGRESQL__USER=authentik \
+            -e AUTHENTIK_POSTGRESQL__PASSWORD=authentik \
+            -e AUTHENTIK_POSTGRESQL__NAME=authentik \
+            -e AUTHENTIK_REDIS__HOST=authentik-redis \
+            -e AUTHENTIK_BOOTSTRAP_TOKEN=ci-mock-token \
+            -e AUTHENTIK_BOOTSTRAP_PASSWORD=ci-mock-password-12345 \
+            -e AUTHENTIK_DISABLE_STARTUP_ANALYTICS=true \
+            -e AUTHENTIK_DISABLE_UPDATE_CHECK=true \
+            ghcr.io/goauthentik/server:2026.2.0 server
+
+          echo "Waiting for Authentik API to be ready..."
+          timeout 60 bash -c 'until curl -sf http://localhost:9000/api/v3/flows/instances/ -H "Authorization: Bearer ci-mock-token" > /dev/null; do sleep 2; done' || true
+          echo "Authentik initialization completed."
+
+      - name: "Setup OCI CLI & Validate OKE Version Support"
         if: github.repository == 'Joffrey-sama/infrastructure' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
         env:
           OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
@@ -82,7 +104,7 @@ jobs:
           OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
         run: |
           if [ -n "$OCI_USER_OCID" ] && [ -n "$OCI_PRIVATE_KEY" ]; then
-            echo "Running OCI OKE compatibility validation..."
+            echo "Configuring OCI credentials..."
             mkdir -p ~/.oci
             cat <<EOF > ~/.oci/config
           [DEFAULT]
@@ -122,85 +144,105 @@ jobs:
               print(f"Error during OCI verification: {e}")
               sys.exit(1)
           PYEOF
+          fi
 
-            # Run full Terraform Plan with dynamic mock vars
-            echo "=== Generating dynamic mock vars for oci-oke plan ==="
-            cat <<EOF > terraform/modules/oci-oke/backend_override.tf
+      - name: "Terraform Lint, Validate & Mock Plan for All Modules"
+        env:
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+        run: |
+          TF_BIN=$(which -a terraform | grep -v '_temp' | head -n 1)
+          if [ -z "$TF_BIN" ] || [ ! -x "$TF_BIN" ]; then
+            TF_BIN="terraform"
+          fi
+          echo "Resolved Terraform binary: $TF_BIN"
+
+          tflint --init || true
+
+          for mod_dir in terraform/modules/*/; do
+            MOD_NAME=$(basename "${mod_dir}")
+            echo "============================================================"
+            echo "=== Processing module: ${MOD_NAME} (${mod_dir}) ==="
+            echo "============================================================"
+            pushd "${mod_dir}"
+
+            # 1. Local backend override
+            cat <<EOF > backend_override.tf
           terraform {
             backend "local" {
               path = "terraform.tfstate"
             }
           }
           EOF
-            cat <<EOF > terraform/modules/oci-oke/mock.tfvars
-          compartment_id     = "${OCI_TENANCY_OCID}"
-          user_ocid          = "${OCI_USER_OCID}"
+
+            # 2. Module-specific test variables
+            case "${MOD_NAME}" in
+              oci-oke)
+                cat <<EOF > mock.tfvars
+          compartment_id     = "${OCI_TENANCY_OCID:-ocid1.tenancy.oc1..mock}"
+          user_ocid          = "${OCI_USER_OCID:-ocid1.user.oc1..mock}"
           onprem_cpe_ip      = "198.51.100.1"
           onprem_nodes_cidr  = "192.168.1.0/24"
           onprem_pods_cidr   = "10.42.0.0/16"
           vpn_vip            = "10.200.0.1"
           admin_source_cidr  = "198.51.100.1/32"
           EOF
-
-            echo "=== Executing Terraform Plan on oci-oke (Live OCI Read-Only) ==="
-            TF_BIN=$(which -a terraform | grep -v '_temp' | head -n 1)
-            if [ -z "$TF_BIN" ] || [ ! -x "$TF_BIN" ]; then
-              TF_BIN="terraform"
-            fi
-            echo "Resolved Terraform binary: $TF_BIN"
-            pushd terraform/modules/oci-oke
-            "$TF_BIN" init -reconfigure -input=false
-            set +e
-            "$TF_BIN" plan -input=false -var-file=mock.tfvars
-            PLAN_RC=$?
-            set -e
-            rm -f backend_override.tf mock.tfvars terraform.tfstate* .terraform/terraform.tfstate
-            popd
-            if [ $PLAN_RC -ne 0 ] && [ $PLAN_RC -ne 2 ]; then
-              echo "Terraform plan failed with error exit code $PLAN_RC"
-              exit $PLAN_RC
-            else
-              echo "SUCCESS: Terraform plan validated successfully (exit code $PLAN_RC)."
-            fi
-          else
-            echo "Skipping OCI validation (secrets not configured)."
-          fi
-
-      - name: "Validate Grafana Module Plan via Mock Vars"
-        run: |
-          echo "=== Executing Terraform Plan on grafana module (Mock Backend) ==="
-          TF_BIN=$(which -a terraform | grep -v '_temp' | head -n 1)
-          if [ -z "$TF_BIN" ] || [ ! -x "$TF_BIN" ]; then
-            TF_BIN="terraform"
-          fi
-          cat <<EOF > terraform/modules/grafana/backend_override.tf
-          terraform {
-            backend "local" {
-              path = "terraform.tfstate"
-            }
-          }
+                ;;
+              authentik)
+                cat <<EOF > mock.tfvars
+          authentik_url                   = "http://localhost:9000"
+          authentik_token                 = "ci-mock-token"
+          initial_admin_password          = "ci-mock-password-12345"
+          admin_username                  = "ci-admin"
+          admin_full_name                 = "CI Administrator"
+          admin_email                     = "admin@example.com"
+          grafana_redirect_uri            = "http://localhost:3000/login/generic_oauth"
+          headlamp_redirect_uri           = "http://localhost:8080/oidc-callback"
+          grafana_client_secret           = "ci-grafana-secret"
+          headlamp_client_secret          = "ci-headlamp-secret"
+          homarr_client_secret            = "ci-homarr-secret"
+          ldap_base_dn                    = "dc=example,dc=com"
+          ldap_bind_password              = "ci-ldap-password"
+          cluster_namespace               = "default"
+          authentik_internal_host         = "http://localhost:9000"
+          cluster_service_connection_name = "ci-cluster"
+          resource_naming_template        = "ci-resource-%s"
           EOF
-          cat <<EOF > terraform/modules/grafana/mock.tfvars
+                ;;
+              grafana)
+                cat <<EOF > mock.tfvars
           grafana_url       = "http://localhost:3000"
           grafana_api_token = "ci-mock-token"
           prometheus_url    = "http://localhost:4000"
           loki_url          = "http://localhost:4000"
           import_dashboards = {}
           EOF
-          pushd terraform/modules/grafana
-          "$TF_BIN" init -reconfigure -input=false
-          set +e
-          "$TF_BIN" plan -input=false -var-file=mock.tfvars
-          PLAN_RC=$?
-          set -e
-          rm -f backend_override.tf mock.tfvars terraform.tfstate* .terraform/terraform.tfstate
-          popd
-          if [ $PLAN_RC -ne 0 ] && [ $PLAN_RC -ne 2 ]; then
-            echo "Grafana Terraform plan failed with error exit code $PLAN_RC"
-            exit $PLAN_RC
-          else
-            echo "SUCCESS: Grafana Terraform plan validated successfully (exit code $PLAN_RC)."
-          fi
+                ;;
+            esac
+
+            # 3. Init, Validate & TFLint
+            "$TF_BIN" init -reconfigure -input=false
+            "$TF_BIN" validate
+            tflint
+
+            # 4. Terraform Plan
+            if [ -f "mock.tfvars" ]; then
+              echo "--- Executing Terraform Plan for ${MOD_NAME} ---"
+              set +e
+              "$TF_BIN" plan -input=false -lock=false -var-file=mock.tfvars
+              PLAN_RC=$?
+              set -e
+              if [ $PLAN_RC -ne 0 ] && [ $PLAN_RC -ne 2 ]; then
+                echo "::error::Terraform plan failed for module ${MOD_NAME} with exit code ${PLAN_RC}"
+                exit $PLAN_RC
+              fi
+              echo "SUCCESS: Plan validated for ${MOD_NAME}."
+            fi
+
+            # 5. Cleanup
+            rm -f backend_override.tf mock.tfvars terraform.tfstate* .terraform/terraform.tfstate
+            popd
+          done
 
       - name: "Guardrail: Check Version Bump on Modified Modules"
         if: github.event_name == 'pull_request'
