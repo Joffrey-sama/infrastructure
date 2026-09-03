@@ -97,11 +97,14 @@ jobs:
           docker exec -e DJANGO_SETTINGS_MODULE=authentik.root.settings authentik-server python -c "
           import django; django.setup()
           from authentik.core.models import User, Token, TokenIntents
-          user = User.objects.filter(is_superuser=True).first() or User.objects.get(username='akadmin')
+          user = User.objects.get(username='akadmin')
           Token.objects.update_or_create(identifier='ci-mock-token', defaults={'user': user, 'key': 'ci-mock-token', 'intent': TokenIntents.INTENT_API})
           print('Token created successfully for', user.username)
-          " || true
-          echo "Authentik initialization completed."
+          "
+
+          echo "Testing Authentik API with provisioned token..."
+          curl -sf http://localhost:9000/api/v3/flows/instances/ -H "Authorization: Bearer ci-mock-token" > /dev/null
+          echo "Authentik initialization completed and verified!"
 
       - name: "Setup OCI CLI & Validate OKE Version Support"
         if: github.repository == 'Joffrey-sama/infrastructure' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
