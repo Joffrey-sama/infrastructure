@@ -397,7 +397,7 @@ jobs:
               
               if [ "$REPLACING" = "DELETED" ] || [ -z "$REPLACING" ]; then
                 # Old node is gone, check if a new ready node running target version is present in kubectl
-                READY_COUNT=$(kubectl get nodes --no-headers 2>/dev/null | grep -i "ready" | grep -v "notready" | wc -l || echo "0")
+                READY_COUNT=$(kubectl get nodes --no-headers 2>/dev/null | grep -i -v "notready" | grep -i -c "ready" || echo "0")
                 echo "Current ready nodes in cluster: $READY_COUNT / $TOTAL_ACTIVE_NODES"
                 if [ "$READY_COUNT" -ge "$TOTAL_ACTIVE_NODES" ]; then
                   echo "Replacement node is Ready and joined the cluster!"
