@@ -3,6 +3,7 @@
   register: k3s_current_version_cmd
   failed_when: false
   changed_when: false
+  check_mode: false
 
 - name: Set current K3s version facts
   ansible.builtin.set_fact:
@@ -45,6 +46,7 @@
       register: k3s_cert_info
       when: k3s_cert_stat.stat.exists
       changed_when: false
+      check_mode: false
 
     - name: Force certificate regeneration if current IP is not in SANs
       when: k3s_cert_stat.stat.exists and ansible_host not in k3s_cert_info.stdout
@@ -109,6 +111,7 @@
           register: remote_kubeconfig_content
           delegate_to: "{{ inventory_hostname }}" # Run this command on the remote node
           changed_when: false # Reading a file doesn't change state
+          check_mode: false
           # This task relies on passwordless sudo being configured by the common role
 
         - name: Ensure .kube directory exists on control node
