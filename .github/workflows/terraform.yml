@@ -64,48 +64,6 @@ jobs:
       - name: "Terraform Format Check"
         run: terraform fmt -check -recursive terraform/
 
-      - name: "Start Ephemeral Authentik Server for Testing"
-        run: |
-          echo "Starting ephemeral Authentik test stack..."
-          docker network create authentik-net || true
-          docker run -d --name authentik-db --network authentik-net \
-            -e POSTGRES_DB=authentik \
-            -e POSTGRES_USER=authentik \
-            -e POSTGRES_PASSWORD=authentik \
-            postgres:16-alpine
-
-          docker run -d --name authentik-redis --network authentik-net redis:alpine
-
-          docker run -d --name authentik-server --network authentik-net \
-            -p 9000:9000 \
-            -e AUTHENTIK_SECRET_KEY=ci-secret-key-1234567890 \
-            -e AUTHENTIK_POSTGRESQL__HOST=authentik-db \
-            -e AUTHENTIK_POSTGRESQL__USER=authentik \
-            -e AUTHENTIK_POSTGRESQL__PASSWORD=authentik \
-            -e AUTHENTIK_POSTGRESQL__NAME=authentik \
-            -e AUTHENTIK_REDIS__HOST=authentik-redis \
-            -e AUTHENTIK_BOOTSTRAP_TOKEN=ci-mock-token \
-            -e AUTHENTIK_BOOTSTRAP_PASSWORD=ci-mock-password-12345 \
-            -e AUTHENTIK_DISABLE_STARTUP_ANALYTICS=true \
-            -e AUTHENTIK_DISABLE_UPDATE_CHECK=true \
-            ghcr.io/goauthentik/server:2026.2.0
-
-          echo "Waiting for Authentik API and blueprints to be ready..."
-          timeout 90 bash -c 'until curl -s http://localhost:9000/api/v3/core/applications/ > /dev/null; do sleep 3; done' || true
-
-          echo "Provisioning API token for akadmin..."
-          docker exec -e DJANGO_SETTINGS_MODULE=authentik.root.settings authentik-server python -c "
-          import django; django.setup()
-          from authentik.core.models import User, Token, TokenIntents
-          user = User.objects.get(username='akadmin')
-          Token.objects.update_or_create(identifier='ci-mock-token', defaults={'user': user, 'key': 'ci-mock-token', 'intent': TokenIntents.INTENT_API})
-          print('Token created successfully for', user.username)
-          " || true
-
-          echo "Testing Authentik API with provisioned token..."
-          timeout 30 bash -c 'until curl -sf http://localhost:9000/api/v3/flows/instances/ -H "Authorization: Bearer ci-mock-token" > /dev/null; do sleep 2; done' || true
-          echo "Authentik initialization completed!"
-
       - name: "Setup OCI CLI & Validate OKE Version Support"
         if: github.repository == 'Joffrey-sama/infrastructure' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
         env:
@@ -198,27 +156,6 @@ jobs:
           onprem_pods_cidr   = "10.42.0.0/16"
           vpn_vip            = "10.200.0.1"
           admin_source_cidr  = "198.51.100.1/32"
-          EOF
-                ;;
-              authentik)
-                cat <<EOF > mock.tfvars
-          authentik_url                   = "http://localhost:9000"
-          authentik_token                 = "ci-mock-token"
-          initial_admin_password          = "ci-mock-password-12345"
-          admin_username                  = "ci-admin"
-          admin_full_name                 = "CI Administrator"
-          admin_email                     = "admin@example.com"
-          grafana_redirect_uri            = "http://localhost:3000/login/generic_oauth"
-          headlamp_redirect_uri           = "http://localhost:8080/oidc-callback"
-          grafana_client_secret           = "ci-grafana-secret"
-          headlamp_client_secret          = "ci-headlamp-secret"
-          homarr_client_secret            = "ci-homarr-secret"
-          ldap_base_dn                    = "dc=example,dc=com"
-          ldap_bind_password              = "ci-ldap-password"
-          cluster_namespace               = "default"
-          authentik_internal_host         = "http://localhost:9000"
-          cluster_service_connection_name = "ci-cluster"
-          resource_naming_template        = "ci-resource-%s"
           EOF
                 ;;
               grafana)
