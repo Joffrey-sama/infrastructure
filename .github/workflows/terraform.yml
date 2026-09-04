@@ -65,7 +65,7 @@ jobs:
         run: terraform fmt -check -recursive terraform/
 
       - name: "Setup OCI CLI & Validate OKE Version Support"
-        if: github.repository == 'Joffrey-sama/infrastructure' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+        if: github.repository == 'Joffrey-sama/infrastructure'
         env:
           OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
           OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
