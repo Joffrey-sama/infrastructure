@@ -76,14 +76,14 @@ jobs:
           if [ -n "$OCI_USER_OCID" ] && [ -n "$OCI_PRIVATE_KEY" ]; then
             echo "Configuring OCI credentials..."
             mkdir -p ~/.oci
-            cat <<EOF > ~/.oci/config
-[DEFAULT]
-user=${OCI_USER_OCID}
-fingerprint=${OCI_FINGERPRINT}
-tenancy=${OCI_TENANCY_OCID}
-region=${OCI_REGION}
-key_file=${HOME}/.oci/oci_api_key.pem
-EOF
+            cat <<EOF | sed 's/^[ \t]*//' > ~/.oci/config
+            [DEFAULT]
+            user=${OCI_USER_OCID}
+            fingerprint=${OCI_FINGERPRINT}
+            tenancy=${OCI_TENANCY_OCID}
+            region=${OCI_REGION}
+            key_file=${HOME}/.oci/oci_api_key.pem
+            EOF
             echo "${OCI_PRIVATE_KEY}" > ~/.oci/oci_api_key.pem
             chmod 600 ~/.oci/oci_api_key.pem ~/.oci/config
 
@@ -300,14 +300,14 @@ EOF
           OCI_KEY_CONTENT: ${{ secrets.OCI_KEY_CONTENT }}
         run: |
           mkdir -p ~/.oci
-          cat <<EOF > ~/.oci/config
-[DEFAULT]
-user=${OCI_USER_OCID}
-fingerprint=${OCI_FINGERPRINT}
-tenancy=${OCI_TENANCY_OCID}
-region=eu-paris-1
-key_file=${HOME}/.oci/oci_api_key.pem
-EOF
+          cat <<EOF | sed 's/^[ \t]*//' > ~/.oci/config
+          [DEFAULT]
+          user=${OCI_USER_OCID}
+          fingerprint=${OCI_FINGERPRINT}
+          tenancy=${OCI_TENANCY_OCID}
+          region=eu-paris-1
+          key_file=${HOME}/.oci/oci_api_key.pem
+          EOF
           echo "${OCI_KEY_CONTENT}" > ~/.oci/oci_api_key.pem
           chmod 600 ~/.oci/oci_api_key.pem ~/.oci/config
 
