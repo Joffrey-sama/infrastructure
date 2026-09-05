@@ -91,7 +91,7 @@ provisioner:
   image:
     # Using a python image and installing dependencies on the fly
     repository: python
-    tag: "3.9-alpine"
+    tag: "3.14-alpine"
     pullPolicy: IfNotPresent
 
   # Jellyfin admin account configuration
