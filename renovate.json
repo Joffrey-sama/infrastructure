@@ -122,12 +122,12 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^ansible/roles/.*/vars/.*\\.yml$/"],
+      "managerFilePatterns": ["/^ansible/roles/.*/vars/.*\\.ya?ml$/"],
       "matchStrings": [
-        "target_os:\\s*\"(?<target_os>[^\"]+)\"[\\s\\S]*?(?<depName>[a-zA-Z0-9_-]+)_pkg_version:\\s*\"(?<currentValue>[^\"]+)\""
+        "(?:^|\\n)(?<depName>[a-zA-Z0-9_]+)_pkg_version:\\s*\"(?<currentValue>[^\"]+)\""
       ],
       "datasourceTemplate": "repology",
-      "packageNameTemplate": "{{target_os}}/{{replace '_' '-' depName}}"
+      "packageNameTemplate": "ubuntu_24_04/{{replace '_' '-' depName}}"
     },
     {
       "customType": "regex",
