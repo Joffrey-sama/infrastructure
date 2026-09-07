@@ -25,7 +25,8 @@ spec:
     spec:
       containers:
         - name: gluetun
-          image: qmcgaw/gluetun:latest
+          image: "{{ $.Values.gluetun.image.repository }}:{{ $.Values.gluetun.image.tag }}"
+          imagePullPolicy: {{ $.Values.gluetun.image.pullPolicy | default "IfNotPresent" }}
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
@@ -68,7 +69,8 @@ spec:
             - name: FIREWALL_INPUT_PORTS
               value: "34400"
         - name: threadfin
-          image: fyb3roptik/threadfin:latest
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy | default "IfNotPresent" }}
           env:
             - name: THREADFIN_BIND
               value: "0.0.0.0"
@@ -97,7 +99,8 @@ spec:
               mountPath: /home/threadfin/.threadfin/conf/ # Aligned with the -config flag argument
       initContainers:
         - name: init-config
-          image: fyb3roptik/threadfin:latest
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy | default "IfNotPresent" }}
           command: ["sh", "-c"]
           args:
             - |

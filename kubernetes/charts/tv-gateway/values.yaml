@@ -1,3 +1,8 @@
+image:
+  repository: fyb3roptik/threadfin
+  tag: "1.2.29"
+  pullPolicy: IfNotPresent
+
 iptv_instances:
   - name: spain
     country: "Spain"
@@ -16,6 +21,10 @@ settings:
   epgSource: "PMS"
 
 gluetun:
+  image:
+    repository: qmcgaw/gluetun
+    tag: "v3.41.1"
+    pullPolicy: IfNotPresent
   localNetwork: "10.42.0.0/16,10.43.0.0/16"
   outboundSubnets: "10.42.0.0/16,10.43.0.0/16"
 

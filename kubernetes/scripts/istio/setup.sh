@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONFIG_FILE="clusters.yaml"
+CONFIG_FILE="${CONFIG_FILE:-clusters.yaml}"
 ISTIO_VERSION="1.28.0"
 
 # Update Helm repository just in case
