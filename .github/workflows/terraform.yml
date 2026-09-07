@@ -343,6 +343,14 @@ jobs:
           terraform output -raw kubeconfig > ~/.kube/config 2>/dev/null || true
           chmod 600 ~/.kube/config
 
+          CAN_KUBECTL=false
+          if kubectl version --request-timeout=3s >/dev/null 2>&1; then
+            CAN_KUBECTL=true
+            echo "Kubernetes API is accessible from runner."
+          else
+            echo "Kubernetes API is not directly accessible from runner (network-restricted). Skipping kubectl cordon/drain."
+          fi
+
           # Fetch Node Pool Details from OCI
           NODE_POOL_JSON=$(oci ce node-pool get --node-pool-id "$NODE_POOL_ID" --query "data" --output json)
           TARGET_VERSION=$(echo "$NODE_POOL_JSON" | jq -r '."kubernetes-version"')
@@ -368,13 +376,13 @@ jobs:
             echo "Rotating Node: $NODE_NAME ($NODE_ID) - Current: $NODE_VER -> Target: $TARGET_VERSION"
             echo "============================================================"
 
-            # Drain logic: only if total active nodes > 1 and DRAIN_ENABLED is true
-            if [ "$TOTAL_ACTIVE_NODES" -gt 1 ] && [ "$DRAIN_ENABLED" = "true" ]; then
+            # Drain logic: only if K8s API is accessible, active nodes > 1 and DRAIN_ENABLED is true
+            if [ "$CAN_KUBECTL" = "true" ] && [ "$TOTAL_ACTIVE_NODES" -gt 1 ] && [ "$DRAIN_ENABLED" = "true" ]; then
               echo "Cordoning & Draining node $NODE_NAME..."
               kubectl cordon "$NODE_NAME" || true
-              kubectl drain "$NODE_NAME" --ignore-daemonsets --delete-emptydir-data --force --grace-period=60 --timeout=5m || true
+              kubectl drain "$NODE_NAME" --ignore-daemonsets --delete-emptydir-data --force --grace-period=60 --timeout=3m || true
             else
-              echo "Skipping drain (Total active nodes: $TOTAL_ACTIVE_NODES, Drain enabled: $DRAIN_ENABLED)."
+              echo "Skipping kubectl drain (Kubectl accessible: $CAN_KUBECTL, Total active: $TOTAL_ACTIVE_NODES, Drain enabled: $DRAIN_ENABLED)."
             fi
 
             echo "Deleting outdated node $NODE_ID from pool (preserving pool size)..."
@@ -382,31 +390,29 @@ jobs:
 
             echo "Waiting for replacement node to be provisioned and join the cluster in Ready state..."
             # Wait loop for new node
-            MAX_WAIT_SECONDS=900
+            MAX_WAIT_SECONDS=600
             ELAPSED=0
             SUCCESS=false
 
             while [ $ELAPSED -lt $MAX_WAIT_SECONDS ]; do
-              sleep 30
-              ELAPSED=$((ELAPSED + 30))
+              sleep 20
+              ELAPSED=$((ELAPSED + 20))
               echo "Checking cluster node status ($ELAPSED / $MAX_WAIT_SECONDS s)..."
 
-              # Check if all active nodes in node pool have target version and are ready
+              # Check if old node is deleted and total active nodes restored in OCI pool
               CURRENT_POOL=$(oci ce node-pool get --node-pool-id "$NODE_POOL_ID" --query "data" --output json)
               REPLACING=$(echo "$CURRENT_POOL" | jq -r --arg NID "$NODE_ID" '.nodes[] | select(.id == $NID) | .["lifecycle-state"]')
+              CURRENT_ACTIVE=$(echo "$CURRENT_POOL" | jq -r '[.nodes[] | select(.["lifecycle-state"] == "ACTIVE")] | length')
               
               if [ "$REPLACING" = "DELETED" ] || [ -z "$REPLACING" ]; then
-                # Old node is gone, check if target version nodes are ACTIVE in OCI pool
-                ACTIVE_COUNT=$(echo "$CURRENT_POOL" | jq -r --arg TARGET "$TARGET_VERSION" \
-                  '[.nodes[] | select(.["lifecycle-state"] == "ACTIVE" and .["kubernetes-version"] == $TARGET)] | length')
-                echo "Current active target version nodes in OCI pool: $ACTIVE_COUNT / $TOTAL_ACTIVE_NODES"
-                if [ "$ACTIVE_COUNT" -ge "$TOTAL_ACTIVE_NODES" ]; then
-                  echo "Replacement node is ACTIVE in OCI pool with target version $TARGET_VERSION!"
+                echo "Old node $NODE_NAME is gone. Active nodes in pool: $CURRENT_ACTIVE / $TOTAL_ACTIVE_NODES"
+                if [ "$CURRENT_ACTIVE" -ge "$TOTAL_ACTIVE_NODES" ]; then
+                  echo "Replacement node is ACTIVE in OCI pool!"
                   SUCCESS=true
                   break
                 fi
               else
-                echo "Old node is currently in state: $REPLACING..."
+                echo "Old node is currently in state: $REPLACING... (Active nodes: $CURRENT_ACTIVE / $TOTAL_ACTIVE_NODES)"
               fi
             done
 
@@ -419,4 +425,6 @@ jobs:
           done <<< "$OUTDATED_NODES"
 
           echo "=== OKE Worker Node Rotation Completed ==="
-          kubectl get nodes -o wide || true
+          if [ "$CAN_KUBECTL" = "true" ]; then
+            kubectl get nodes -o wide || true
+          fi
