@@ -75,7 +75,9 @@
     },
     {
       "matchManagers": ["ansible", "ansible-galaxy", "custom.regex"],
-      "matchPaths": ["ansible/**"],
+      "matchFileNames": [
+        "ansible/**"
+      ],
       "addLabels": ["renovate", "ansible"],
       "bumpVersions": [
         {
@@ -88,7 +90,9 @@
     },
     {
       "matchManagers": ["custom.regex"],
-      "matchPaths": ["ansible/**"],
+      "matchFileNames": [
+        "ansible/**"
+      ],
       "matchUpdateTypes": ["patch", "digest", "minor"],
       "groupName": "ansible patch updates",
       "addLabels": ["renovate", "ansible"],
@@ -103,7 +107,9 @@
     },
     {
       "matchManagers": ["custom.regex"],
-      "matchPaths": ["terraform/modules/**"],
+      "matchFileNames": [
+        "terraform/modules/**"
+      ],
       "addLabels": ["renovate", "terraform"],
       "bumpVersions": [
         {
