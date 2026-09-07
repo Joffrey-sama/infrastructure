@@ -14,7 +14,7 @@
   "packageRules": [
     {
       "matchPackageNames": ["kubernetes/kubernetes"],
-      "allowedVersions": "/^v?({{major}}\\.{{minor}}\\.{{add patch 1}}|{{major}}\\.{{add minor 1}}\\.0|{{add major 1}}\\.0\\.0)$/"
+      "allowedVersions": "/^v?({{major}}\\.{{minor}}\\.{{add patch 1}}|{{major}}\\.{{add minor 1}}\\.1|{{add major 1}}\\.0\\.1)$/"
     },
     {
       "matchPackageNames": ["k3s-io/k3s"],
