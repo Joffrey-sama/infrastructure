@@ -2,6 +2,9 @@
 
 All notable changes to the `joffrey_sama.infrastructure` Ansible collection will be documented in this file.
 
+## [1.1.8] - 2026-09-07
+- Add `maintenance.yml` playbook for Ubuntu host OS package maintenance (dist-upgrade, autoremove, autoclean, and reboot management).
+
 ## [1.1.4] - 2026-08-14
 - Condition control node kubeconfig configuration with k3s_configure_control_node variable.
 

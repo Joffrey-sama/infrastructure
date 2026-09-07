@@ -1,0 +1,36 @@
+---
+- name: Host OS Maintenance and Package Updates
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+
+    - name: Upgrade all packages to latest version (dist-upgrade)
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: true
+        autoclean: true
+
+    - name: Check if system reboot is required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: Reboot server if required and allowed
+      ansible.builtin.reboot:
+        msg: "Rebooting host after OS maintenance updates applied by Ansible"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 5
+        post_reboot_delay: 15
+        test_command: uptime
+      when: reboot_required_file.stat.exists and (allow_reboot | default(false) | bool)
+
+    - name: Notify reboot requirement
+      ansible.builtin.debug:
+        msg: "WARNING: /var/run/reboot-required exists! The host needs to be rebooted (pass '-e allow_reboot=true' to allow automatic reboot)."
+      when: reboot_required_file.stat.exists and not (allow_reboot | default(false) | bool)
