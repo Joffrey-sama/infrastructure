@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -274,7 +274,7 @@ jobs:
       TF_VAR_grafana_api_token: ${{ secrets.GRAFANA_API_TOKEN }}
     steps:
       - name: "Checkout Ops Config (Calling Repo)"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: ops
 
