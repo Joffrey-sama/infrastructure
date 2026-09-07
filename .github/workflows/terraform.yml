@@ -396,11 +396,12 @@ jobs:
               REPLACING=$(echo "$CURRENT_POOL" | jq -r --arg NID "$NODE_ID" '.nodes[] | select(.id == $NID) | .["lifecycle-state"]')
               
               if [ "$REPLACING" = "DELETED" ] || [ -z "$REPLACING" ]; then
-                # Old node is gone, check if a new ready node running target version is present in kubectl
-                READY_COUNT=$(kubectl get nodes --no-headers 2>/dev/null | grep -i -v "notready" | grep -i -c "ready" || echo "0")
-                echo "Current ready nodes in cluster: $READY_COUNT / $TOTAL_ACTIVE_NODES"
-                if [ "$READY_COUNT" -ge "$TOTAL_ACTIVE_NODES" ]; then
-                  echo "Replacement node is Ready and joined the cluster!"
+                # Old node is gone, check if target version nodes are ACTIVE in OCI pool
+                ACTIVE_COUNT=$(echo "$CURRENT_POOL" | jq -r --arg TARGET "$TARGET_VERSION" \
+                  '[.nodes[] | select(.["lifecycle-state"] == "ACTIVE" and .["kubernetes-version"] == $TARGET)] | length')
+                echo "Current active target version nodes in OCI pool: $ACTIVE_COUNT / $TOTAL_ACTIVE_NODES"
+                if [ "$ACTIVE_COUNT" -ge "$TOTAL_ACTIVE_NODES" ]; then
+                  echo "Replacement node is ACTIVE in OCI pool with target version $TARGET_VERSION!"
                   SUCCESS=true
                   break
                 fi
