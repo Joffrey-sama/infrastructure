@@ -23,7 +23,7 @@ settings:
 gluetun:
   image:
     repository: qmcgaw/gluetun
-    tag: "v3.41.1"
+    tag: "v3.41.3"
     pullPolicy: IfNotPresent
   localNetwork: "10.42.0.0/16,10.43.0.0/16"
   outboundSubnets: "10.42.0.0/16,10.43.0.0/16"
