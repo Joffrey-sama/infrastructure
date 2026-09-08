@@ -227,7 +227,7 @@ main:
           enabled: false
           image:
             repository: qmcgaw/gluetun
-            tag: v3.41.1
+            tag: v3.41.3
 
           securityContext:
             capabilities:
