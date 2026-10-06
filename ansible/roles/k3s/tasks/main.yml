@@ -66,6 +66,27 @@
             name: k3s
             state: restarted
 
+- name: Configure K3s local-storage reclaim policy
+  block:
+    - name: Check if K3s local-storage manifest exists
+      ansible.builtin.stat:
+        path: "{{ storage_path | default('/srv/k3s-storage') }}/server/manifests/local-storage.yaml"
+      register: k3s_local_storage_manifest
+
+    - name: Patch K3s local-storage manifest with Retain reclaim policy
+      when: k3s_local_storage_manifest.stat.exists
+      ansible.builtin.replace:
+        path: "{{ storage_path | default('/srv/k3s-storage') }}/server/manifests/local-storage.yaml"
+        regexp: 'reclaimPolicy:\s*Delete'
+        replace: "reclaimPolicy: {{ k3s_local_storage_reclaim_policy | default('Retain') }}"
+      register: k3s_local_storage_patched
+
+    - name: Recreate local-path StorageClass in Kubernetes if manifest was patched
+      when: k3s_local_storage_patched is defined and k3s_local_storage_patched.changed
+      ansible.builtin.command: kubectl delete storageclass local-path
+      changed_when: true
+      failed_when: false
+
 - name: Ensure .kube directory exists
   ansible.builtin.file:
     path: "{{ ansible_facts['env']['HOME'] }}/.kube"
