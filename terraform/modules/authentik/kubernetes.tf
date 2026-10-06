@@ -1,10 +1,11 @@
 # --- Kubernetes Clusters ---
 resource "authentik_provider_oauth2" "kubernetes" {
   name               = "Kubernetes"
-  client_type        = "public"
-  invalidation_flow  = data.authentik_flow.default-authentication-flow.id
-  client_id          = "kubernetes"
-  authorization_flow = data.authentik_flow.default-authorization-flow.id
+  client_type         = "public"
+  authentication_flow = data.authentik_flow.default-authentication-flow.id
+  authorization_flow  = data.authentik_flow.default-authorization-flow.id
+  invalidation_flow   = data.authentik_flow.default-invalidation-flow.id
+  client_id           = "kubernetes"
   property_mappings = [
     data.authentik_property_mapping_provider_scope.scope_openid.id,
     data.authentik_property_mapping_provider_scope.scope_profile.id,
