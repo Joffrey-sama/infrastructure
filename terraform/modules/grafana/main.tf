@@ -33,3 +33,14 @@ output "oci_logs_datasource_id" {
   description = "OCI Logs datasource ID (if enabled)"
   value       = try(grafana_data_source.oci_logs[0].id, null)
 }
+
+output "custom_grafana_folder_id" {
+  description = "Grafana folder ID for custom dashboards (if any)"
+  value       = try(grafana_folder.custom[0].id, null)
+}
+
+output "custom_dashboards" {
+  description = "List of custom dashboard names (slugs) provisioned"
+  value       = keys(var.custom_dashboards)
+}
+
