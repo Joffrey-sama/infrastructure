@@ -1,6 +1,6 @@
 # --- Headlamp Dashboard ---
 resource "authentik_provider_oauth2" "headlamp" {
-  name               = "Headlamp"
+  name                = "Headlamp"
   client_type         = "confidential"
   authentication_flow = data.authentik_flow.default-authentication-flow.id
   authorization_flow  = data.authentik_flow.default-authorization-flow.id

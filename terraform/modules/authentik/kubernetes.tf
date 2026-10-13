@@ -1,6 +1,6 @@
 # --- Kubernetes Clusters ---
 resource "authentik_provider_oauth2" "kubernetes" {
-  name               = "Kubernetes"
+  name                = "Kubernetes"
   client_type         = "public"
   authentication_flow = data.authentik_flow.default-authentication-flow.id
   authorization_flow  = data.authentik_flow.default-authorization-flow.id

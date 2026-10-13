@@ -56,7 +56,7 @@ resource "authentik_user" "admin" {
   name     = var.admin_full_name
   email    = var.admin_email
   password = var.initial_admin_password
-  groups   = [
+  groups = [
     authentik_group.admins.id,
     authentik_group.standard_users.id
   ]

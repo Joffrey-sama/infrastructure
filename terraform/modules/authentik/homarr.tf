@@ -1,6 +1,6 @@
 # --- Homarr Dashboard ---
 resource "authentik_provider_oauth2" "homarr" {
-  name               = "Homarr"
+  name                = "Homarr"
   client_type         = "confidential"
   authentication_flow = data.authentik_flow.default-authentication-flow.id
   authorization_flow  = data.authentik_flow.default-authorization-flow.id
