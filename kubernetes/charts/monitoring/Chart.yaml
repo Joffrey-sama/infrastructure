@@ -1,6 +1,6 @@
 apiVersion: v2
 name: monitoring
-version: 1.0.0
+version: 1.1.0
 dependencies:
   - name: grafana
     version: "12.3.0"
@@ -18,7 +18,7 @@ dependencies:
     version: "1.8.1"
     repository: "https://grafana.github.io/helm-charts"
   - name: kube-state-metrics
-    version: "7.3.0"
+    version: "7.8.1"
     repository: "https://prometheus-community.github.io/helm-charts/"
   - name: alertmanager
     version: "1.37.0"
