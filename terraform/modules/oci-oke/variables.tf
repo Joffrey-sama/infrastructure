@@ -13,7 +13,7 @@ variable "compartment_id" {
 variable "kubernetes_version" {
   description = "Kubernetes version for the cluster"
   type        = string
-  default     = "v1.36.1"
+  default     = "v1.36.2"
 }
 
 variable "node_pool_size" {
