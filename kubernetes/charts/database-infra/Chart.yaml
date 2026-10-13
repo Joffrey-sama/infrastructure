@@ -2,7 +2,7 @@ apiVersion: v2
 name: database-infra
 description: A Helm chart for PostgreSQL database with automatic DB provisioning
 type: application
-version: 0.1.0
+version: 1.0.0
 dependencies:
   - name: postgresql
     version: 13.2.27
