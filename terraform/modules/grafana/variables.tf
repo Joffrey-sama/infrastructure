@@ -20,11 +20,6 @@ variable "greptimedb_pg_url" {
   default     = ""
 }
 
-variable "loki_url" {
-  description = "GreptimeDB URL for Loki logs endpoint (deprecated)"
-  type        = string
-  default     = ""
-}
 
 variable "oci_metrics_endpoint" {
   description = "OCI Monitoring metrics endpoint (optional)"
