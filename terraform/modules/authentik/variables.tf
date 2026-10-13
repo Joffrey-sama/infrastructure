@@ -13,6 +13,7 @@ variable "initial_admin_password" {
   description = "Password for the administrator user"
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "admin_username" {

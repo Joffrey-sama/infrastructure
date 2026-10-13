@@ -14,10 +14,12 @@ variable "prometheus_url" {
   type        = string
 }
 
-variable "loki_url" {
-  description = "GreptimeDB URL for Loki logs endpoint"
+variable "greptimedb_pg_url" {
+  description = "GreptimeDB PostgreSQL endpoint for SQL log queries (e.g. host:4003)"
   type        = string
+  default     = ""
 }
+
 
 variable "oci_metrics_endpoint" {
   description = "OCI Monitoring metrics endpoint (optional)"
@@ -46,4 +48,16 @@ variable "alertmanager_url" {
 variable "import_dashboards" {
   description = "Map of dashboard names to their download URLs (e.g., Grafana API, GitHub raw)."
   type        = map(string)
+}
+
+variable "custom_dashboards" {
+  description = "Map of custom dashboard names (slugs) to their raw JSON content."
+  type        = map(string)
+  default     = {}
+}
+
+variable "custom_folder_name" {
+  description = "Grafana folder name for custom dashboards"
+  type        = string
+  default     = "Custom Dashboards"
 }

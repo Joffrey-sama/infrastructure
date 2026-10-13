@@ -21,6 +21,10 @@ data "authentik_flow" "default-authentication-flow" {
   slug = "default-authentication-flow"
 }
 
+data "authentik_flow" "default-invalidation-flow" {
+  slug = "default-invalidation-flow"
+}
+
 data "authentik_service_connection_kubernetes" "local" {
   name = var.cluster_service_connection_name
 }
@@ -52,5 +56,8 @@ resource "authentik_user" "admin" {
   name     = var.admin_full_name
   email    = var.admin_email
   password = var.initial_admin_password
-  groups   = [authentik_group.admins.id]
+  groups = [
+    authentik_group.admins.id,
+    authentik_group.standard_users.id
+  ]
 }

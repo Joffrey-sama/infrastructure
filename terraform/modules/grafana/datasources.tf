@@ -13,15 +13,19 @@ resource "grafana_data_source" "greptimedb" {
   })
 }
 
-# Logs datasource for GreptimeDB (Loki)
+# Logs datasource for GreptimeDB (PostgreSQL)
 resource "grafana_data_source" "greptimedb_logs" {
-  name        = "GreptimeDB Logs"
-  type        = "loki"
-  url         = var.loki_url
-  access_mode = "proxy"
+  name          = "GreptimeDB Logs"
+  type          = "postgres"
+  url           = var.greptimedb_pg_url
+  database_name = "public"
+  username      = "greptime"
+  access_mode   = "proxy"
 
   json_data_encoded = jsonencode({
-    maxLines = 1000
+    database        = "public"
+    sslmode         = "disable"
+    postgresVersion = 1400
   })
 }
 

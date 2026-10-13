@@ -7,6 +7,7 @@ resource "authentik_user" "ldap_bind" {
   type      = "service_account"
   password  = var.ldap_bind_password
   is_active = true
+  groups    = [authentik_group.admins.id]
 }
 
 resource "authentik_provider_ldap" "ldap_provider" {
@@ -20,6 +21,18 @@ resource "authentik_application" "ldap" {
   name              = "Internal LDAP"
   slug              = "ldap"
   protocol_provider = authentik_provider_ldap.ldap_provider.id
+}
+
+resource "authentik_policy_binding" "ldap_admins" {
+  target = authentik_application.ldap.uuid
+  group  = authentik_group.admins.id
+  order  = 0
+}
+
+resource "authentik_policy_binding" "ldap_standard_users" {
+  target = authentik_application.ldap.uuid
+  group  = authentik_group.standard_users.id
+  order  = 1
 }
 
 resource "authentik_outpost" "ldap_outpost" {

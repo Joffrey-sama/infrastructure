@@ -73,3 +73,15 @@
     port: '53'
     proto: udp
     comment: 'Allow DNS (AdGuard Home)'
+
+- name: Disable swap immediately
+  ansible.builtin.command: swapoff -a
+  when: ansible_facts['swaptotal_mb'] | default(0) > 0
+  changed_when: true
+
+- name: Disable swap in /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#\s]+\s+[^#\s]+\s+swap\s+.*)$'
+    replace: '# \1'
+

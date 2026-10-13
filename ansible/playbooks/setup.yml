@@ -22,3 +22,4 @@
         - { key: "vm.max_map_count", value: "262144" } # For Elasticsearch/OpenSearch
         - { key: "fs.inotify.max_user_watches", value: "524288" } # For media servers like Jellyfin
         - { key: "fs.inotify.max_user_instances", value: "512" } # For media servers like Jellyfin
+        - { key: "vm.swappiness", value: "0" } # Completely disable swapping on host

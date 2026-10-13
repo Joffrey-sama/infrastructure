@@ -4,3 +4,5 @@ k3s_kubeconfig_mode: "0644"
 k3s_server_args:
   - "--disable=servicelb"
   - "--disable=traefik"
+
+k3s_local_storage_reclaim_policy: "Retain"
