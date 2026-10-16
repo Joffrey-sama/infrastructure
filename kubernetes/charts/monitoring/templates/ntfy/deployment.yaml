@@ -1,0 +1,141 @@
+{{- if and .Values.ntfy .Values.ntfy.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: ntfy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: notification
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ntfy
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/ntfy/configmap.yaml") . | sha256sum }}
+        {{- with .Values.ntfy.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        app.kubernetes.io/name: ntfy
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ dig "serviceAccount" "name" "ntfy" .Values.ntfy }}
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: ntfy
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "{{ dig "image" "repository" "docker.io/binwiederhier/ntfy" .Values.ntfy }}:{{ dig "image" "tag" "v2.11.0" .Values.ntfy }}"
+          imagePullPolicy: {{ dig "image" "pullPolicy" "IfNotPresent" .Values.ntfy }}
+          command:
+            - ntfy
+            - serve
+            - --config
+            - /etc/ntfy/server.yml
+          env:
+            {{- with .Values.ntfy.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.ntfy.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/ntfy/server.yml
+              subPath: server.yml
+              readOnly: true
+            - name: templates
+              mountPath: /etc/ntfy/templates
+              readOnly: true
+            - name: data
+              mountPath: /var/cache/ntfy
+        - name: alertmanager-bridge
+          image: "ghcr.io/alexbakker/alertmanager-ntfy:latest"
+          imagePullPolicy: IfNotPresent
+          args:
+            - --configs
+            - /etc/alertmanager-ntfy/config.yml
+          ports:
+            - name: bridge
+              containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: bridge
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: bridge
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            limits:
+              cpu: 50m
+              memory: 32Mi
+            requests:
+              cpu: 5m
+              memory: 16Mi
+          volumeMounts:
+            - name: bridge-config
+              mountPath: /etc/alertmanager-ntfy/config.yml
+              subPath: alertmanager-ntfy.yml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: ntfy-config
+            items:
+              - key: server.yml
+                path: server.yml
+        - name: templates
+          configMap:
+            name: ntfy-config
+            items:
+              - key: grafana.yml
+                path: grafana.yml
+        - name: bridge-config
+          configMap:
+            name: ntfy-config
+            items:
+              - key: alertmanager-ntfy.yml
+                path: alertmanager-ntfy.yml
+        - name: data
+          emptyDir: {}
+{{- end }}

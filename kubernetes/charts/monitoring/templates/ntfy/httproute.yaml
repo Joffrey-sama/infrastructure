@@ -1,0 +1,25 @@
+{{- if and .Values.ntfy .Values.ntfy.enabled .Values.ntfy.httproute .Values.ntfy.httproute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ntfy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: ntfy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: notification
+spec:
+  parentRefs:
+    {{- toYaml .Values.ntfy.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml .Values.ntfy.httproute.hostnames | nindent 4 }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ntfy
+          port: 80
+{{- end }}
+

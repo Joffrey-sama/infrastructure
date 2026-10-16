@@ -18,13 +18,14 @@ set -o pipefail
 #   ./generate-secrets.sh [-c|--default-context <kube-context>]
 
 SECRETS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-CONFIG_FILE="${SECRETS_DIR}/secrets.yaml"
+CONFIG_FILE="${CONFIG_FILE:-${SECRETS_DIR}/secrets.yaml}"
 
 # Parse arguments
 DEFAULT_CONTEXT=""
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -c|--default-context) DEFAULT_CONTEXT="$2"; shift ;;
+        -f|--file) CONFIG_FILE="$2"; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
