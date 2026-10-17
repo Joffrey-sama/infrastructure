@@ -39,10 +39,10 @@ variable "grafana_folder_name" {
   default     = "Imported Dashboards"
 }
 
-variable "alertmanager_url" {
+variable "ntfy_url" {
   type        = string
-  description = "URL de l'instance Alertmanager"
-  default     = "http://alertmanager.monitoring.svc.cluster.local:9093"
+  description = "URL of ntfy service for push notifications"
+  default     = ""
 }
 
 variable "import_dashboards" {
@@ -55,9 +55,14 @@ variable "custom_dashboards" {
   type        = map(string)
   default     = {}
 }
-
 variable "custom_folder_name" {
   description = "Grafana folder name for custom dashboards"
   type        = string
   default     = "Custom Dashboards"
+}
+
+variable "notification_repeat_interval" {
+  description = "Repeat interval for firing alerts in Grafana notification policy"
+  type        = string
+  default     = "1d"
 }
