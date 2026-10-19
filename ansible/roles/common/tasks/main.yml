@@ -85,3 +85,45 @@
     regexp: '^([^#\s]+\s+[^#\s]+\s+swap\s+.*)$'
     replace: '# \1'
 
+- name: Override Ubuntu kernel blacklist for Intel TCO hardware watchdog
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/watchdog.conf
+    content: |
+      # Override Ubuntu default kernel blacklist for iTCO_wdt
+      install iTCO_wdt /sbin/modprobe --ignore-install iTCO_wdt
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Ensure watchdog kernel modules are loaded at boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/watchdog.conf
+    content: |
+      iTCO_wdt
+      softdog
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Load softdog kernel watchdog module immediately
+  community.general.modprobe:
+    name: softdog
+    state: present
+
+- name: Configure systemd hardware/kernel watchdog timers
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/system.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: '^#?RuntimeWatchdogSec=', line: 'RuntimeWatchdogSec=20s' }
+    - { regexp: '^#?RebootWatchdogSec=', line: 'RebootWatchdogSec=30s' }
+  register: systemd_watchdog_config
+
+- name: Reload systemd manager configuration to arm watchdog
+  ansible.builtin.systemd:
+    daemon_reexec: true
+  when: systemd_watchdog_config.changed and not ansible_check_mode
+
+
