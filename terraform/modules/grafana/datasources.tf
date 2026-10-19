@@ -55,13 +55,4 @@ resource "grafana_data_source" "oci_logs" {
   })
 }
 
-# Alertmanager Datasource
-resource "grafana_data_source" "alertmanager" {
-  name        = "Alertmanager"
-  type        = "alertmanager"
-  url         = var.alertmanager_url
-  access_mode = "proxy"
-  json_data_encoded = jsonencode({
-    implementation = "prometheus"
-  })
-}
+

@@ -1,0 +1,26 @@
+{{- if and .Values.ntfy .Values.ntfy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: ntfy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: ntfy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: notification
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: bridge
+  selector:
+    app.kubernetes.io/name: ntfy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+

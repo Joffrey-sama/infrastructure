@@ -1,0 +1,75 @@
+{{- if and .Values.ntfy .Values.ntfy.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ntfy-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: ntfy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: notification
+data:
+  server.yml: |
+    {{- if .Values.ntfy.config.baseUrl }}
+    base-url: {{ .Values.ntfy.config.baseUrl | quote }}
+    {{- end }}
+    listen-http: {{ .Values.ntfy.config.listenHttp | default ":8080" | quote }}
+    behind-proxy: {{ .Values.ntfy.config.behindProxy }}
+    {{- if not (or .Values.ntfy.config.databaseUrl .Values.ntfy.config.usePostgres) }}
+    cache-file: "/var/cache/ntfy/cache.db"
+    auth-file: "/var/cache/ntfy/user.db"
+    {{- end }}
+    cache-duration: {{ .Values.ntfy.config.cacheDuration | default "24h" | quote }}
+    attachment-cache-dir: "/var/cache/ntfy/attachments"
+    auth-default-access: {{ .Values.ntfy.config.authDefaultAccess | default "read-write" | quote }}
+    enable-signup: {{ .Values.ntfy.config.enableSignup }}
+    enable-login: {{ .Values.ntfy.config.enableLogin }}
+    template-dir: "/etc/ntfy/templates"
+    {{- if .Values.ntfy.config.upstreamBaseUrl }}
+    upstream-base-url: {{ .Values.ntfy.config.upstreamBaseUrl | quote }}
+    {{- end }}
+  grafana.yml: |
+    title: |
+      {{ `{{- if eq .status "firing" }}` }}
+      🚨 {{ `{{ .title | default "Alerte en cours" }}` }}
+      {{ `{{- else if eq .status "resolved" }}` }}
+      ✅ {{ `{{ .title | default "Alerte résolue" }}` }}
+      {{ `{{- else }}` }}
+      ⚠️ {{ `{{ .title | default "Alerte Grafana" }}` }}
+      {{ `{{- end }}` }}
+    message: |
+      {{ `{{ .message | default "Aucun détail fourni" | trunc 2000 }}` }}
+    priority: |
+      {{ `{{- if eq .status "firing" }}4{{ else }}3{{ end }}` }}
+    tags:
+      - {{ `{{ if eq .status "firing" }}warning{{ else }}white_check_mark{{ end }}` }}
+      - grafana
+    click: "{{ `{{ with (first .alerts) }}{{ .generatorURL | default $.externalURL }}{{ else }}{{ .externalURL }}{{ end }}` }}"
+    actions:
+      - action: view
+        label: "Open in Grafana"
+        url: "{{ `{{ with (first .alerts) }}{{ .generatorURL | default $.externalURL }}{{ else }}{{ .externalURL }}{{ end }}` }}"
+  alertmanager-ntfy.yml: |
+    http:
+      addr: :8000
+    ntfy:
+      baseurl: http://localhost:8080
+      notification:
+        topic: alerts
+        priority: |
+          status == "firing" ? "urgent" : "default"
+        tags:
+          - tag: "+1"
+            condition: status == "resolved"
+          - tag: rotating_light
+            condition: status == "firing"
+        templates:
+          title: |
+            {{ `{{ if eq .Status "resolved" }}✅ [RESOLVED] {{ else }}🚨 [FIRING] {{ end }}{{ index .Annotations "summary" }}` }}
+          description: |
+            {{ `{{ index .Annotations "description" }}` }}
+          headers:
+            X-Click: |
+              {{ `{{ .GeneratorURL }}` }}
+{{- end }}
+

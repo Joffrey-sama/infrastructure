@@ -23,3 +23,8 @@
         - { key: "fs.inotify.max_user_watches", value: "524288" } # For media servers like Jellyfin
         - { key: "fs.inotify.max_user_instances", value: "512" } # For media servers like Jellyfin
         - { key: "vm.swappiness", value: "0" } # Completely disable swapping on host
+        - { key: "kernel.panic", value: "10" } # Reboot 10s after kernel panic
+        - { key: "kernel.panic_on_oops", value: "1" } # Treat kernel oops as fatal panic
+        - { key: "kernel.hung_task_panic", value: "1" } # Panic when tasks hang in D-state
+        - { key: "kernel.hung_task_timeout_secs", value: "120" } # Timeout before declaring task hung
+        - { key: "vm.panic_on_oom", value: "0" } # Let OOM killer work before panicking
