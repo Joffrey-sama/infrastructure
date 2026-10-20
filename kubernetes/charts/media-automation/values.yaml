@@ -151,6 +151,13 @@ main:
         failedJobsHistory: 1
       pod:
         annotations: {}
+      initContainers:
+        init-config:
+          image:
+            repository: docker.io/library/busybox
+            tag: 1.36.1
+          command:
+            ["sh", "-c", "cp /tmp/qbitmanage/config.yaml /config/config.yaml && chmod 666 /config/config.yaml"]
       containers:
         main:
           image:
@@ -159,6 +166,8 @@ main:
           env:
             - name: QBT_RUN
               value: "true"
+            - name: QBT_WEB_SERVER
+              value: "false"
             - name: QBT_CONFIG_DIR
               value: "/config"
           resources:
@@ -276,13 +285,21 @@ main:
     #         - path: /media
     qbitmanage-config:
       enabled: false
+      type: emptyDir
+      advancedMounts:
+        qbitmanage:
+          main:
+            - path: /config
+          init-config:
+            - path: /config
+    qbitmanage-configmap:
+      enabled: false
       type: configMap
       identifier: qbitmanage-config
       advancedMounts:
         qbitmanage:
-          main:
-            - path: /config/config.yaml
-              subPath: config.yaml
+          init-config:
+            - path: /tmp/qbitmanage
 
   configMaps:
     sabnzbd-ini:
