@@ -141,6 +141,34 @@ main:
                 failureThreshold: 30
                 periodSeconds: 5
 
+    qbitmanage:
+      enabled: false
+      type: cronjob
+      cronjob:
+        schedule: "0 3 * * *"
+        concurrencyPolicy: Forbid
+        successfulJobsHistory: 3
+        failedJobsHistory: 1
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: ghcr.io/hotio/qbitmanage
+            tag: release-v4.14.0
+          env:
+            - name: QBT_RUN
+              value: "true"
+            - name: QBT_CONFIG_DIR
+              value: "/config"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
   service:
     qbittorrent:
       controller: qbittorrent
@@ -238,6 +266,24 @@ main:
           init-config:
             - path: /tmp/sabnzbd-ini
 
+    # qbitmanage-media:
+    #   enabled: false
+    #   type: persistentVolumeClaim
+    #   existingClaim: "shared-media"
+    #   advancedMounts:
+    #     qbitmanage:
+    #       main:
+    #         - path: /media
+    qbitmanage-config:
+      enabled: false
+      type: configMap
+      identifier: qbitmanage-config
+      advancedMounts:
+        qbitmanage:
+          main:
+            - path: /config/config.yaml
+              subPath: config.yaml
+
   configMaps:
     sabnzbd-ini:
       data:
@@ -278,6 +324,19 @@ main:
             host: "0.0.0.0",
             apiAuth: false,
           };
+    qbitmanage-config:
+      data:
+        config.yaml: |
+          commands:
+            dry_run: true
+            rem_orphaned: false
+            tag_nohardlinks: false
+            share_limits: false
+          qbt:
+            host: "localhost:8080"
+          directory:
+            root_dir: "/media/downloads"
+            orphaned_dir: "/media/downloads/orphaned_data"
 
 # Sub-charts dependencies config
 homarr:
