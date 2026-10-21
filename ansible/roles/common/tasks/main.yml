@@ -94,6 +94,7 @@
     owner: root
     group: root
     mode: '0644'
+  register: watchdog_modprobe
 
 - name: Ensure watchdog kernel modules are loaded at boot
   ansible.builtin.copy:
@@ -104,11 +105,23 @@
     owner: root
     group: root
     mode: '0644'
+  register: watchdog_modules_load
+
+- name: Update initramfs when watchdog configuration changes
+  ansible.builtin.command: update-initramfs -u
+  when: (watchdog_modprobe.changed or watchdog_modules_load.changed) and not ansible_check_mode
+
+- name: Load iTCO_wdt hardware watchdog module immediately
+  community.general.modprobe:
+    name: iTCO_wdt
+    state: present
+  failed_when: false
 
 - name: Load softdog kernel watchdog module immediately
   community.general.modprobe:
     name: softdog
     state: present
+  failed_when: false
 
 - name: Configure systemd hardware/kernel watchdog timers
   ansible.builtin.lineinfile:

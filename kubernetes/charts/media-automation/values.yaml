@@ -141,6 +141,84 @@ main:
                 failureThreshold: 30
                 periodSeconds: 5
 
+    qbitmanage:
+      enabled: false
+      type: cronjob
+      cronjob:
+        schedule: "0 3 * * *"
+        concurrencyPolicy: Forbid
+        successfulJobsHistory: 3
+        failedJobsHistory: 1
+      pod:
+        annotations: {}
+      initContainers:
+        init-config:
+          image:
+            repository: docker.io/library/busybox
+            tag: 1.36.1
+          command:
+            ["sh", "-c", "cp /tmp/qbitmanage/config.yaml /config/config.yaml && chmod 666 /config/config.yaml"]
+      containers:
+        main:
+          image:
+            repository: ghcr.io/hotio/qbitmanage
+            tag: release-v4.14.0
+          env:
+            - name: QBT_RUN
+              value: "true"
+            - name: QBT_WEB_SERVER
+              value: "false"
+            - name: QBT_CONFIG_DIR
+              value: "/config"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+    jellysweep:
+      enabled: false
+      type: deployment
+      replicas: 1
+      strategy: Recreate
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: ghcr.io/jon4hz/jellysweep
+            tag: v0.16.1
+          env:
+            - name: JELLYSWEEP_LISTEN
+              value: "0.0.0.0:3002"
+            - name: JELLYSWEEP_DRY_RUN
+              value: "true"
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          probes:
+            liveness:
+              enabled: true
+              type: TCP
+              port: 3002
+            readiness:
+              enabled: true
+              type: TCP
+              port: 3002
+            startup:
+              enabled: true
+              type: TCP
+              port: 3002
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+
   service:
     qbittorrent:
       controller: qbittorrent
@@ -149,11 +227,20 @@ main:
           port: 8080
         cross-seed:
           port: 2468
+        proxy:
+          port: 8888
     sabnzbd:
       controller: sabnzbd
       ports:
         http:
           port: 8080
+    jellysweep:
+      enabled: false
+      controller: jellysweep
+      ports:
+        http:
+          port: 3002
+
 
   route:
     qbittorrent:
@@ -170,6 +257,13 @@ main:
       #     namespace: gateway-system
       # hostnames:
       #   - usenet.internal.example.com
+    jellysweep:
+      enabled: false
+      # parentRefs:
+      #   - name: my-gateway
+      #     namespace: gateway-system
+      # hostnames:
+      #   - jellysweep.internal.example.com
 
   persistence:
     qbittorrent-config:
@@ -238,6 +332,52 @@ main:
           init-config:
             - path: /tmp/sabnzbd-ini
 
+    # qbitmanage-media:
+    #   enabled: false
+    #   type: persistentVolumeClaim
+    #   existingClaim: "shared-media"
+    #   advancedMounts:
+    #     qbitmanage:
+    #       main:
+    #         - path: /media
+    qbitmanage-config:
+      enabled: false
+      type: emptyDir
+      advancedMounts:
+        qbitmanage:
+          main:
+            - path: /config
+          init-config:
+            - path: /config
+    qbitmanage-configmap:
+      enabled: false
+      type: configMap
+      identifier: qbitmanage-config
+      advancedMounts:
+        qbitmanage:
+          init-config:
+            - path: /tmp/qbitmanage
+
+    jellysweep-data:
+      enabled: false
+      type: persistentVolumeClaim
+      storageClass: "local-path"
+      size: 1Gi
+      accessMode: ReadWriteOnce
+      advancedMounts:
+        jellysweep:
+          main:
+            - path: /app/data
+    jellysweep-config:
+      enabled: false
+      type: configMap
+      identifier: jellysweep-config
+      advancedMounts:
+        jellysweep:
+          main:
+            - path: /app/config.yml
+              subPath: config.yml
+
   configMaps:
     sabnzbd-ini:
       data:
@@ -278,6 +418,19 @@ main:
             host: "0.0.0.0",
             apiAuth: false,
           };
+    qbitmanage-config:
+      data:
+        config.yaml: |
+          commands:
+            dry_run: true
+            rem_orphaned: false
+            tag_nohardlinks: false
+            share_limits: false
+          qbt:
+            host: "localhost:8080"
+          directory:
+            root_dir: "/media/downloads"
+            orphaned_dir: "/media/downloads/orphaned_data"
 
 # Sub-charts dependencies config
 homarr:

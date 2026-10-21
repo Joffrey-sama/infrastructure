@@ -39,6 +39,11 @@ variable "headlamp_redirect_uri" {
   type = string
 }
 
+variable "jellysweep_redirect_uri" {
+  type    = string
+  default = "https://jellysweep.internal.delva-home.fr/auth/oidc/callback"
+}
+
 variable "grafana_client_secret" {
   type      = string
   sensitive = true
@@ -51,6 +56,11 @@ variable "headlamp_client_secret" {
 
 
 variable "homarr_client_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "jellysweep_client_secret" {
   type      = string
   sensitive = true
 }
