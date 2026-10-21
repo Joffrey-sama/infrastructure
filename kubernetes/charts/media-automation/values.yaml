@@ -235,10 +235,12 @@ main:
         http:
           port: 8080
     jellysweep:
+      enabled: false
       controller: jellysweep
       ports:
         http:
           port: 3002
+
 
   route:
     qbittorrent:
