@@ -271,7 +271,9 @@ jobs:
       TF_VAR_grafana_client_secret: ${{ secrets.GRAFANA_CLIENT_SECRET }}
       TF_VAR_headlamp_client_secret: ${{ secrets.HEADLAMP_CLIENT_SECRET }}
       TF_VAR_homarr_client_secret: ${{ secrets.HOMARR_CLIENT_SECRET }}
+      TF_VAR_jellysweep_client_secret: ${{ secrets.JELLYSWEEP_CLIENT_SECRET }}
       TF_VAR_grafana_api_token: ${{ secrets.GRAFANA_API_TOKEN }}
+
     steps:
       - name: "Checkout Ops Config (Calling Repo)"
         uses: actions/checkout@v7
