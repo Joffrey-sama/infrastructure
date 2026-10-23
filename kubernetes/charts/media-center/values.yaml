@@ -106,7 +106,7 @@ provisioner:
   plugins:
     ldap:
       enabled: false
-      version: "22.0.0.0" # Leave empty for the latest version
+      version: "24.0.0.0" # Leave empty for the latest version
       # config:
       #   LdapServer: "authentik-ldap.common-services.svc.cluster.local"
       #   LdapPort: 389
@@ -118,6 +118,13 @@ provisioner:
       #   LdapSearchFilter: "(objectClass=inetOrgPerson)"
       #   LdapAdminFilter: "(memberOf=cn=Admins,ou=groups,dc=ldap,dc=example,dc=com)"
       #   CreateUsersFromLdap: true
+    playbackReporting:
+      enabled: false
+      version: "" # Leave empty for the latest version
+    extraPlugins: []
+    # - name: "Webhook"
+    #   guid: "5c534381-..."
+    #   version: ""
 
   # Configuration of libraries to create
   libraries:

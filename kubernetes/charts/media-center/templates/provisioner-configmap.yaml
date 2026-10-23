@@ -24,6 +24,7 @@ data:
     # --- Static Configuration ---
     # This header is required for all API calls
     BASE_HEADERS = {
+        "Authorization": 'MediaBrowser Client="helm-provisioner", Device="k8s-job", DeviceId="{{ .Release.Name }}", Version="1.0"',
         "X-Emby-Authorization": 'MediaBrowser Client="helm-provisioner", Device="k8s-job", DeviceId="{{ .Release.Name }}", Version="1.0"'
     }
 
@@ -301,6 +302,27 @@ data:
                 raise # Re-raise other HTTP errors
         return restart_needed
 
+    def configure_playback_reporting_plugin(auth_headers):
+        """Installs the Playback Reporting plugin."""
+        if "{{ .Values.provisioner.plugins.playbackReporting.enabled | default false }}" != "true":
+            return False
+
+        version = "{{ .Values.provisioner.plugins.playbackReporting.version | default "" }}"
+        return install_plugin(auth_headers, "Playback Reporting", "5c534381-91a3-43cb-907a-35aa02eb9d2c", version)
+
+    def configure_extra_plugins(auth_headers):
+        """Installs additional plugins from extraPlugins list."""
+        extra_plugins = json.loads("""{{ .Values.provisioner.plugins.extraPlugins | default list | toJson }}""")
+        restart_needed = False
+        for p in extra_plugins:
+            name = p.get("name")
+            guid = p.get("guid")
+            version = p.get("version", "")
+            if name and guid:
+                if install_plugin(auth_headers, name, guid, version):
+                    restart_needed = True
+        return restart_needed
+
     def create_libraries(auth_headers):
         """Creates media libraries defined in the Helm values."""
         print("Processing libraries...")
@@ -369,10 +391,18 @@ data:
 
         # 5. Prepare authenticated headers for subsequent calls
         auth_headers = BASE_HEADERS.copy()
+        auth_headers["Authorization"] = f'MediaBrowser Client="helm-provisioner", Device="k8s-job", DeviceId="{{ .Release.Name }}", Version="1.0", Token="{api_key}"'
         auth_headers["X-MediaBrowser-Token"] = api_key
+        auth_headers["X-Emby-Token"] = api_key
 
         # 6. Configure plugins
-        restart_required = configure_ldap_plugin(auth_headers)
+        restart_required = False
+        if configure_ldap_plugin(auth_headers):
+            restart_required = True
+        if configure_playback_reporting_plugin(auth_headers):
+            restart_required = True
+        if configure_extra_plugins(auth_headers):
+            restart_required = True
         if restart_required:
             return True # Signal to the orchestrator that a restart is needed
 
