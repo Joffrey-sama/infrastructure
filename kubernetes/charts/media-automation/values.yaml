@@ -197,11 +197,11 @@ main:
               value: "true"
           resources:
             requests:
-              cpu: 20m
-              memory: 64Mi
+              cpu: 50m
+              memory: 128Mi
             limits:
-              cpu: 200m
-              memory: 256Mi
+              cpu: 500m
+              memory: 1Gi
           probes:
             liveness:
               enabled: true
@@ -215,6 +215,50 @@ main:
               enabled: true
               type: TCP
               port: 3002
+              spec:
+                failureThreshold: 30
+                periodSeconds: 5
+
+    jellystat:
+      enabled: false
+      type: deployment
+      replicas: 1
+      strategy: Recreate
+      pod:
+        annotations: {}
+      containers:
+        main:
+          image:
+            repository: cyfershepard/jellystat
+            tag: 1.1.12
+          env:
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: TZ
+              value: "UTC"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          probes:
+            liveness:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 3000
+            readiness:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 3000
+            startup:
+              enabled: true
+              type: HTTP
+              path: /
+              port: 3000
               spec:
                 failureThreshold: 30
                 periodSeconds: 5
@@ -240,7 +284,12 @@ main:
       ports:
         http:
           port: 3002
-
+    jellystat:
+      enabled: false
+      controller: jellystat
+      ports:
+        http:
+          port: 3000
 
   route:
     qbittorrent:
@@ -264,6 +313,13 @@ main:
       #     namespace: gateway-system
       # hostnames:
       #   - jellysweep.internal.example.com
+    jellystat:
+      enabled: false
+      # parentRefs:
+      #   - name: my-gateway
+      #     namespace: gateway-system
+      # hostnames:
+      #   - stats.internal.example.com
 
   persistence:
     qbittorrent-config:
