@@ -178,7 +178,7 @@ main:
               cpu: 500m
               memory: 512Mi
 
-    jellysweep:
+    maintainerr:
       enabled: false
       type: deployment
       replicas: 1
@@ -188,52 +188,9 @@ main:
       containers:
         main:
           image:
-            repository: ghcr.io/jon4hz/jellysweep
-            tag: v0.16.1
+            repository: ghcr.io/maintainerr/maintainerr
+            tag: 3.31.0
           env:
-            - name: JELLYSWEEP_LISTEN
-              value: "0.0.0.0:3002"
-            - name: JELLYSWEEP_DRY_RUN
-              value: "true"
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
-          probes:
-            liveness:
-              enabled: true
-              type: TCP
-              port: 3002
-            readiness:
-              enabled: true
-              type: TCP
-              port: 3002
-            startup:
-              enabled: true
-              type: TCP
-              port: 3002
-              spec:
-                failureThreshold: 30
-                periodSeconds: 5
-
-    jellystat:
-      enabled: false
-      type: deployment
-      replicas: 1
-      strategy: Recreate
-      pod:
-        annotations: {}
-      containers:
-        main:
-          image:
-            repository: cyfershepard/jellystat
-            tag: 1.1.12
-          env:
-            - name: POSTGRES_PORT
-              value: "5432"
             - name: TZ
               value: "UTC"
           resources:
@@ -248,17 +205,17 @@ main:
               enabled: true
               type: HTTP
               path: /
-              port: 3000
+              port: 6246
             readiness:
               enabled: true
               type: HTTP
               path: /
-              port: 3000
+              port: 6246
             startup:
               enabled: true
               type: HTTP
               path: /
-              port: 3000
+              port: 6246
               spec:
                 failureThreshold: 30
                 periodSeconds: 5
@@ -278,18 +235,12 @@ main:
       ports:
         http:
           port: 8080
-    jellysweep:
+    maintainerr:
       enabled: false
-      controller: jellysweep
+      controller: maintainerr
       ports:
         http:
-          port: 3002
-    jellystat:
-      enabled: false
-      controller: jellystat
-      ports:
-        http:
-          port: 3000
+          port: 6246
 
   route:
     qbittorrent:
@@ -306,20 +257,13 @@ main:
       #     namespace: gateway-system
       # hostnames:
       #   - usenet.internal.example.com
-    jellysweep:
+    maintainerr:
       enabled: false
       # parentRefs:
       #   - name: my-gateway
       #     namespace: gateway-system
       # hostnames:
-      #   - jellysweep.internal.example.com
-    jellystat:
-      enabled: false
-      # parentRefs:
-      #   - name: my-gateway
-      #     namespace: gateway-system
-      # hostnames:
-      #   - stats.internal.example.com
+      #   - maintainerr.internal.example.com
 
   persistence:
     qbittorrent-config:
@@ -414,25 +358,16 @@ main:
           init-config:
             - path: /tmp/qbitmanage
 
-    jellysweep-data:
+    maintainerr-data:
       enabled: false
       type: persistentVolumeClaim
       storageClass: "local-path"
       size: 1Gi
       accessMode: ReadWriteOnce
       advancedMounts:
-        jellysweep:
+        maintainerr:
           main:
-            - path: /app/data
-    jellysweep-config:
-      enabled: false
-      type: configMap
-      identifier: jellysweep-config
-      advancedMounts:
-        jellysweep:
-          main:
-            - path: /app/config.yml
-              subPath: config.yml
+            - path: /opt/data
 
   configMaps:
     sabnzbd-ini:
