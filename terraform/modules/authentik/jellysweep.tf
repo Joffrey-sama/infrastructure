@@ -13,10 +13,6 @@ resource "authentik_provider_oauth2" "jellysweep" {
     data.authentik_property_mapping_provider_scope.scope_email.id
   ]
   signing_key = data.authentik_certificate_key_pair.default.id
-  allowed_grant_types = [
-    "authorization_code",
-    "refresh_token"
-  ]
   allowed_redirect_uris = [
     {
       matching_mode = "strict",
