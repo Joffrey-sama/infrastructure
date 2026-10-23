@@ -21,6 +21,11 @@
       "allowedVersions": "<={{major}}.{{add minor 1}}"
     },
     {
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["^ghcr\\.io/hotio/"],
+      "versioning": "regex:^release-v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:\\.(?<build>\\d+))?$"
+    },
+    {
       "matchPackageNames": ["/.*/"],
       "groupName": null,
       "additionalBranchPrefix": "{{packageFileDir}}-"
