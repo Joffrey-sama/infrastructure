@@ -9,4 +9,4 @@ description: A Helm chart for the Servarr suite (Radarr, Sonarr, Prowlarr, Bazar
   and helper Flaresolverr
 name: servarr
 type: application
-version: 0.2.0
+version: 0.3.0
