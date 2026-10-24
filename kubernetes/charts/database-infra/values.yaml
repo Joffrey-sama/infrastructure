@@ -3,10 +3,24 @@ global:
 
 postgresql:
   enabled: false
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql
+    digest: "sha256:50df5b736a5aea2f1cdb3e2d223f80f30a2353c2514a8e8132945cbc21842944"
+  metrics:
+    image:
+      registry: docker.io
+      repository: bitnami/postgres-exporter
+      digest: "sha256:7906d7520fc9247181c1abf26d5593bc577508f5caeb5bca1d71f4081bc9c987"
+  volumePermissions:
+    image:
+      registry: docker.io
+      repository: bitnami/os-shell
+      digest: "sha256:3f93a40e9cfead5252f1fe4913cfab231e33381765f42dc525e52fec7afdeeaf"
 
 provisionDatabases:
   enabled: false
   postgresHost: ""
   podAnnotations: {}
-  image: "docker.io/library/postgres:16"
+  image: "docker.io/bitnami/postgresql@sha256:50df5b736a5aea2f1cdb3e2d223f80f30a2353c2514a8e8132945cbc21842944"
   databases: []
