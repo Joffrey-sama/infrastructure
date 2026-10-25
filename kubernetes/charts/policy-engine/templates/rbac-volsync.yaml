@@ -1,0 +1,43 @@
+{{- if .Values.volsyncPolicy.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-volsync-replicationsources
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}-volsync-rbac
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+rules:
+  - apiGroups:
+      - volsync.backube
+    resources:
+      - replicationsources
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-volsync-replicationsources
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}-volsync-rbac
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-volsync-replicationsources
+  subjects:
+  - kind: ServiceAccount
+    name: kyverno-admission-controller
+    namespace: {{ .Release.Namespace }}
+  - kind: ServiceAccount
+    name: kyverno-background-controller
+    namespace: {{ .Release.Namespace }}
+{{- end }}

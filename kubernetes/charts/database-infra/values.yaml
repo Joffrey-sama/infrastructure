@@ -24,3 +24,38 @@ provisionDatabases:
   podAnnotations: {}
   image: "docker.io/bitnami/postgresql@sha256:50df5b736a5aea2f1cdb3e2d223f80f30a2353c2514a8e8132945cbc21842944"
   databases: []
+
+backup:
+  enabled: false
+  schedule: "0 2 * * *"
+  postgresHost: ""
+  postgresMasterSecretName: "postgresql-master-secret"
+  postgresMasterSecretKey: "postgres-password"
+  retentionDays: 30
+  rcloneSecretName: ""
+  destination: ""
+  podAnnotations: {}
+  postgresImage:
+    repository: "docker.io/bitnami/postgresql"
+    tag: ""
+    digest: "sha256:50df5b736a5aea2f1cdb3e2d223f80f30a2353c2514a8e8132945cbc21842944"
+    pullPolicy: IfNotPresent
+  rcloneImage:
+    repository: "docker.io/rclone/rclone"
+    tag: "1.68.2"
+    pullPolicy: IfNotPresent
+  resources:
+    dump:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    upload:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
