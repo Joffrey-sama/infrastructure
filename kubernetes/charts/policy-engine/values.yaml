@@ -1,5 +1,15 @@
 kyverno:
   enabled: true
+  crds:
+    install: false
+    migration:
+      enabled: false
+  config:
+    preserve: false
+  policyReportsCleanup:
+    enabled: false
+  webhooksCleanup:
+    enabled: false
   admissionController:
     replicas: 1
   backgroundController:
@@ -8,3 +18,20 @@ kyverno:
     replicas: 1
   reportsController:
     replicas: 1
+
+dockerCredsPolicy:
+  enabled: false
+
+volsyncPolicy:
+  enabled: false
+  schedule: "0 3 * * *"
+  rcloneSecret: "rclone-backup-secret"
+  rcloneSection: "gdrive-secure"
+  baseDestinationPath: "backups/onprem"
+  excludeNamespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+    - volsync-system
+    - policy-engine
+  excludeAnnotation: "backup.delva-home.fr/exclude"
