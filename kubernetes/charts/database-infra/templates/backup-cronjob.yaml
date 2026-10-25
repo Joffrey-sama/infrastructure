@@ -1,0 +1,131 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}-backup
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit | default 3 }}
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit | default 5 }}
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: {{ .Release.Name }}-backup
+            app.kubernetes.io/instance: {{ .Release.Name }}
+          {{- with .Values.backup.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+            - name: postgres-dump
+              {{- if .Values.backup.postgresImage.digest }}
+              image: "{{ .Values.backup.postgresImage.repository }}@{{ .Values.backup.postgresImage.digest }}"
+              {{- else }}
+              image: "{{ .Values.backup.postgresImage.repository }}:{{ .Values.backup.postgresImage.tag }}"
+              {{- end }}
+              imagePullPolicy: {{ .Values.backup.postgresImage.pullPolicy | default "IfNotPresent" }}
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  HOST="{{ .Values.backup.postgresHost | default (printf "%s-postgresql" .Release.Name) }}"
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  FILENAME="postgresql_backup_${TIMESTAMP}.sql.gz"
+
+                  echo "=== [PostgreSQL Backup] Target Host: ${HOST} ==="
+                  echo "=== [PostgreSQL Backup] Checking database readiness ==="
+                  until pg_isready -h "${HOST}" -U postgres; do
+                    echo "Waiting for PostgreSQL..."
+                    sleep 2
+                  done
+
+                  echo "=== [PostgreSQL Backup] Starting pg_dumpall ==="
+                  START_TIME=$(date +%s)
+                  pg_dumpall -h "${HOST}" -U postgres | gzip > "/backup/${FILENAME}"
+                  END_TIME=$(date +%s)
+
+                  DURATION=$((END_TIME - START_TIME))
+                  SIZE=$(stat -c%s "/backup/${FILENAME}" 2>/dev/null || stat -f%z "/backup/${FILENAME}")
+                  SIZE_MB=$((SIZE / 1024 / 1024))
+
+                  echo "=== [PostgreSQL Backup] Dump completed in ${DURATION}s (${SIZE_MB} MB, ${SIZE} bytes) ==="
+                  echo "${FILENAME}" > /backup/latest_filename
+                  echo "${DURATION}" > /backup/latest_duration
+                  echo "${SIZE}" > /backup/latest_size
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.backup.postgresMasterSecretName | default "postgresql-master-secret" }}
+                      key: {{ .Values.backup.postgresMasterSecretKey | default "postgres-password" }}
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+              {{- with .Values.backup.resources.dump }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+
+          containers:
+            - name: rclone-upload
+              image: "{{ .Values.backup.rcloneImage.repository }}:{{ .Values.backup.rcloneImage.tag }}"
+              imagePullPolicy: {{ .Values.backup.rcloneImage.pullPolicy | default "IfNotPresent" }}
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  FILENAME=$(cat /backup/latest_filename)
+                  DUMP_DURATION=$(cat /backup/latest_duration)
+                  DUMP_SIZE=$(cat /backup/latest_size)
+                  DESTINATION="{{ .Values.backup.destination }}"
+
+                  echo "=== [Rclone Upload] Uploading ${FILENAME} to ${DESTINATION} ==="
+                  START_UPLOAD=$(date +%s)
+                  rclone --config /config/rclone/rclone.conf copy "/backup/${FILENAME}" "${DESTINATION}"
+                  END_UPLOAD=$(date +%s)
+
+                  UPLOAD_DURATION=$((END_UPLOAD - START_UPLOAD))
+                  TOTAL_DURATION=$((DUMP_DURATION + UPLOAD_DURATION))
+
+                  echo "=== [Rclone Upload] Upload completed in ${UPLOAD_DURATION}s ==="
+                  echo "=== [Summary Metrics] ==="
+                  echo "metric_backup_dump_duration_seconds=${DUMP_DURATION}"
+                  echo "metric_backup_upload_duration_seconds=${UPLOAD_DURATION}"
+                  echo "metric_backup_total_duration_seconds=${TOTAL_DURATION}"
+                  echo "metric_backup_size_bytes=${DUMP_SIZE}"
+
+                  {{- if .Values.backup.retentionDays }}
+                  echo "=== [Rclone Prune] Deleting backups older than {{ .Values.backup.retentionDays }}d in ${DESTINATION} ==="
+                  rclone --config /config/rclone/rclone.conf delete "${DESTINATION}" --min-age {{ .Values.backup.retentionDays }}d
+                  {{- end }}
+
+                  echo "=== [PostgreSQL Backup] All backup tasks finished successfully ==="
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+                - name: rclone-config
+                  mountPath: /config/rclone
+                  readOnly: true
+              {{- with .Values.backup.resources.upload }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+
+          volumes:
+            - name: backup-storage
+              emptyDir: {}
+            - name: rclone-config
+              secret:
+                secretName: {{ .Values.backup.rcloneSecretName }}
+{{- end }}
