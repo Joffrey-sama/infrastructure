@@ -75,8 +75,6 @@ jobs:
         id: diff
         run: |
           TARGET_BRANCH="${{ inputs.target_branch || 'main' }}"
-          echo "### 🔍 Flux Pre-flight Diff (against ${TARGET_BRANCH})" > diff_output.md
-          echo "" >> diff_output.md
 
           # Run build test first
           if ! flux-local test --path "${{ inputs.cluster_path }}"; then
@@ -87,13 +85,17 @@ jobs:
             --path "${{ inputs.cluster_path }}" \
             --branch-orig "origin/${TARGET_BRANCH}" 2>&1 || true)
 
-          if [ -n "$DIFF_OUTPUT" ]; then
-            echo "\`\`\`diff" >> diff_output.md
-            echo "$DIFF_OUTPUT" >> diff_output.md
-            echo "\`\`\`" >> diff_output.md
-          else
-            echo "✅ No changes detected." >> diff_output.md
-          fi
+          {
+            echo "### 🔍 Flux Pre-flight Diff (against ${TARGET_BRANCH})"
+            echo ""
+            if [ -n "$DIFF_OUTPUT" ]; then
+              echo "\`\`\`diff"
+              echo "$DIFF_OUTPUT"
+              echo "\`\`\`"
+            else
+              echo "✅ No changes detected."
+            fi
+          } > diff_output.md
 
       - name: "Comment Diff on PR"
         if: inputs.comment_on_pr && github.event_name == 'pull_request'
