@@ -1,0 +1,116 @@
+name: "Flux CI/CD"
+
+on:
+  workflow_dispatch:
+    inputs:
+      cluster_path:
+        description: "Path to cluster root directory in caller repository"
+        required: true
+        type: string
+        default: "kubernetes/clusters/oci-oke"
+      target_branch:
+        description: "Target branch to compare against"
+        required: false
+        type: string
+        default: "main"
+      comment_on_pr:
+        description: "Post diff as comment on the pull request"
+        required: false
+        type: boolean
+        default: false
+      python_version:
+        description: "Python version for flux-local"
+        required: false
+        type: string
+        default: "3.12"
+  workflow_call:
+    inputs:
+      cluster_path:
+        description: "Path to cluster root directory in caller repository"
+        required: true
+        type: string
+      target_branch:
+        description: "Target branch to compare against (e.g. main)"
+        required: false
+        type: string
+        default: "main"
+      comment_on_pr:
+        description: "Post diff as comment on the pull request"
+        required: false
+        type: boolean
+        default: true
+      python_version:
+        description: "Python version for flux-local"
+        required: false
+        type: string
+        default: "3.12"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  flux-diff:
+    name: "Flux Diff & Validate"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v7
+        with:
+          python-version: "${{ inputs.python_version }}"
+
+      - name: "Setup Flux CLI"
+        uses: fluxcd/flux2/action@v2
+
+      - name: "Install flux-local"
+        run: |
+          pip install flux-local
+
+      - name: "Run Flux Diff & Build"
+        id: diff
+        run: |
+          TARGET_BRANCH="${{ inputs.target_branch || 'main' }}"
+
+          # Run build test first
+          if ! flux-local test --path "${{ inputs.cluster_path }}"; then
+            echo "::warning::flux-local build validation reported issues for ${{ inputs.cluster_path }}"
+          fi
+
+          DIFF_OUTPUT=$(flux-local diff kustomization \
+            --path "${{ inputs.cluster_path }}" \
+            --branch-orig "origin/${TARGET_BRANCH}" 2>&1 || true)
+
+          {
+            echo "### 🔍 Flux Pre-flight Diff (against ${TARGET_BRANCH})"
+            echo ""
+            if [ -n "$DIFF_OUTPUT" ]; then
+              echo "\`\`\`diff"
+              echo "$DIFF_OUTPUT"
+              echo "\`\`\`"
+            else
+              echo "✅ No changes detected."
+            fi
+          } > diff_output.md
+
+      - name: "Comment Diff on PR"
+        if: inputs.comment_on_pr && github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('diff_output.md')) {
+              const diffContent = fs.readFileSync('diff_output.md', 'utf8');
+              if (diffContent.trim().length > 0) {
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: diffContent
+                });
+              }
+            }
