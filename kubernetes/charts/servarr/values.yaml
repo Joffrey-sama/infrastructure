@@ -82,7 +82,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/radarr
-            tag: release-5.19.3.9730
+            tag: release-6.4.4.10685
           probes:
             liveness:
               enabled: true
