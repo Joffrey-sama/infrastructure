@@ -42,7 +42,7 @@ backup:
     pullPolicy: IfNotPresent
   rcloneImage:
     repository: "docker.io/rclone/rclone"
-    tag: "1.68.2"
+    tag: "1.75.2"
     pullPolicy: IfNotPresent
   resources:
     dump:
