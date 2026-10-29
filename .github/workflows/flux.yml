@@ -65,7 +65,7 @@ jobs:
           python-version: "${{ inputs.python_version }}"
 
       - name: "Setup Flux CLI"
-        uses: fluxcd/flux2/action@v2.9.5
+        uses: fluxcd/flux2/action@v2.9.6
 
       - name: "Install flux-local"
         run: |
