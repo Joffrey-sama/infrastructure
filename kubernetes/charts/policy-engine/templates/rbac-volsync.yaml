@@ -33,7 +33,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: {{ .Release.Name }}-volsync-replicationsources
-  subjects:
+subjects:
   - kind: ServiceAccount
     name: kyverno-admission-controller
     namespace: {{ .Release.Namespace }}
