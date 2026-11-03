@@ -178,7 +178,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/bazarr
-            tag: release-1.5.1
+            tag: release-v1.6.2
           probes:
             liveness:
               enabled: true
