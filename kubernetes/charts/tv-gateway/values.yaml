@@ -1,6 +1,6 @@
 image:
   repository: fyb3roptik/threadfin
-  tag: "1.2.29"
+  tag: "1.2.37"
   pullPolicy: IfNotPresent
 
 iptv_instances:
