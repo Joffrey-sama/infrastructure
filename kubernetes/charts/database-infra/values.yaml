@@ -22,7 +22,7 @@ provisionDatabases:
   enabled: false
   postgresHost: ""
   podAnnotations: {}
-  image: "docker.io/bitnami/postgresql@sha256:50df5b736a5aea2f1cdb3e2d223f80f30a2353c2514a8e8132945cbc21842944"
+  image: "docker.io/bitnami/postgresql@sha256:b012ffb507f322d1d31d4696dd61d5e1b672fcb0b35d23476ea6e0518d81a8f9"
   databases: []
 
 backup:
