@@ -37,6 +37,9 @@ jobs:
 
       - name: "Lint & Template Charts"
         run: |
+          echo "=== Adding Helm repositories ==="
+          helm repo add bjw-s https://bjw-s-labs.github.io/helm-charts/ || true
+
           echo "=== Building dependencies for subcharts first ==="
           if [ -d "kubernetes/charts/servarr" ]; then
             echo "Pre-building servarr subchart dependencies..."
@@ -45,7 +48,7 @@ jobs:
 
           echo "=== Building dependencies for all charts ==="
           for chart in kubernetes/charts/*/; do
-            if [ -f "${chart}Chart.yaml" ]; then
+            if [ -f "${chart}Chart.yaml" ] && [ "${chart}" != "kubernetes/charts/servarr/" ]; then
               echo "Building dependencies for ${chart}..."
               helm dependency build "${chart}"
             fi
@@ -125,6 +128,9 @@ jobs:
 
           MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
 
+          echo "=== Adding Helm repositories ==="
+          helm repo add bjw-s https://bjw-s-labs.github.io/helm-charts/ || true
+
           echo "=== Pre-building dependencies for subcharts first ==="
           if [ -d "kubernetes/charts/servarr" ]; then
             echo "Building servarr subchart dependencies..."
@@ -133,7 +139,7 @@ jobs:
 
           echo "=== Pre-building dependencies for all charts ==="
           for dep_chart in kubernetes/charts/*/; do
-            if [ -f "${dep_chart}Chart.yaml" ]; then
+            if [ -f "${dep_chart}Chart.yaml" ] && [ "${dep_chart}" != "kubernetes/charts/servarr/" ]; then
               echo "Building dependencies for ${dep_chart}..."
               helm dependency build "${dep_chart}"
             fi
