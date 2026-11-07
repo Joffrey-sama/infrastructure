@@ -37,17 +37,32 @@ jobs:
 
       - name: "Lint & Template Charts"
         run: |
+          echo "=== Adding Helm repositories ==="
+          helm repo add bjw-s https://bjw-s-labs.github.io/helm-charts/ || true
+
+          echo "=== Building dependencies for subcharts first ==="
+          if [ -d "kubernetes/charts/servarr" ]; then
+            echo "Pre-building servarr subchart dependencies..."
+            helm dependency build "kubernetes/charts/servarr"
+          fi
+
+          echo "=== Building dependencies for all charts ==="
+          for chart in kubernetes/charts/*/; do
+            if [ -f "${chart}Chart.yaml" ] && [ "${chart}" != "kubernetes/charts/servarr/" ]; then
+              echo "Building dependencies for ${chart}..."
+              helm dependency build "${chart}"
+            fi
+          done
+
           TARGET_DIR="${{ inputs.chart_dir }}"
           if [ -n "$TARGET_DIR" ]; then
             echo "=== Linting chart: ${TARGET_DIR} ==="
-            helm dependency build "${TARGET_DIR}" || true
             helm lint "${TARGET_DIR}"
             helm template test-release "${TARGET_DIR}" > /dev/null
           else
             for chart in kubernetes/charts/*/; do
               if [ -f "${chart}Chart.yaml" ]; then
                 echo "=== Linting chart: ${chart} ==="
-                helm dependency build "${chart}" || true
                 helm lint "${chart}"
                 helm template test-release "${chart}" > /dev/null
               fi
@@ -113,6 +128,23 @@ jobs:
 
           MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
 
+          echo "=== Adding Helm repositories ==="
+          helm repo add bjw-s https://bjw-s-labs.github.io/helm-charts/ || true
+
+          echo "=== Pre-building dependencies for subcharts first ==="
+          if [ -d "kubernetes/charts/servarr" ]; then
+            echo "Building servarr subchart dependencies..."
+            helm dependency build "kubernetes/charts/servarr"
+          fi
+
+          echo "=== Pre-building dependencies for all charts ==="
+          for dep_chart in kubernetes/charts/*/; do
+            if [ -f "${dep_chart}Chart.yaml" ] && [ "${dep_chart}" != "kubernetes/charts/servarr/" ]; then
+              echo "Building dependencies for ${dep_chart}..."
+              helm dependency build "${dep_chart}"
+            fi
+          done
+
           for chart_dir in kubernetes/charts/*/; do
             if [ -f "${chart_dir}Chart.yaml" ]; then
               CHART_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('${chart_dir}Chart.yaml'))['name'])")
@@ -128,7 +160,7 @@ jobs:
                   exit 1
                 fi
 
-                helm dependency build "${chart_dir}" || true
+                helm dependency build "${chart_dir}"
                 helm package "${chart_dir}" --destination .helm-packages
 
                 PKG_FILE=".helm-packages/${CHART_NAME}-${CHART_VERSION}.tgz"
