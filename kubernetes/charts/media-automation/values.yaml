@@ -162,7 +162,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/qbitmanage
-            tag: release-v4.14.0
+            tag: release-v4.15.0
           env:
             - name: QBT_RUN
               value: "true"
