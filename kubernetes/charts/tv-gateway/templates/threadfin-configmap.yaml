@@ -1,0 +1,426 @@
+{{- if .Values.threadfin.config.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}-seed
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+data:
+  seed.json: |
+    {
+      "buffer": {{ .Values.threadfin.config.settings.buffer | default "ffmpeg" | quote }},
+      "epgSource": {{ .Values.threadfin.config.settings.epgSource | default "XEPG" | quote }},
+      "dummy": {{ .Values.threadfin.config.settings.dummy | default true }},
+      "ffmpegForceHttp": {{ .Values.threadfin.config.settings.ffmpegForceHttp | default false }},
+      "ffmpegOptions": {{ .Values.threadfin.config.settings.ffmpegOptions | default "-hide_banner -loglevel error -i [URL] -c copy -f mpegts pipe:1" | quote }},
+      "ffmpegPath": {{ .Values.threadfin.config.settings.ffmpegPath | default "/usr/bin/ffmpeg" | quote }},
+      "ignoreFilters": {{ .Values.threadfin.config.settings.ignoreFilters | default true }},
+      "tuner": {{ .Values.threadfin.config.settings.tuner | default 1 }},
+      "playlists": {{ .Values.threadfin.config.playlists | default list | toJson }},
+      "xmltv": {{ .Values.threadfin.config.xmltv | default list | toJson }},
+      "filters": {{ .Values.threadfin.config.filters | default list | toJson }},
+      "customM3U": {{ .Values.threadfin.config.customM3U | default list | toJson }},
+      "curatedRules": {{ .Values.threadfin.config.curatedRules | default list | toJson }},
+      "logos": {{ .Values.threadfin.config.logos | default dict | toJson }},
+      "streamOverrides": {{ .Values.threadfin.config.streamOverrides | default dict | toJson }}
+    }
+  merge-config.py: |
+    import json
+    import os
+    import random
+    import re
+    import string
+    import time
+    import urllib.request
+    import xml.etree.ElementTree as ET
+
+    CONF_DIR = "/home/threadfin/conf"
+    DATA_DIR = os.path.join(CONF_DIR, "data")
+    SETTINGS_FILE = os.path.join(CONF_DIR, "settings.json")
+    XEPG_FILE = os.path.join(CONF_DIR, "xepg.json")
+    SEED_FILE = "/etc/threadfin/seed/seed.json"
+
+    os.makedirs(CONF_DIR, exist_ok=True)
+    os.makedirs(os.path.join(CONF_DIR, "backup"), exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    with open(SEED_FILE, "r") as f:
+        seed = json.load(f)
+
+    if os.path.exists(SETTINGS_FILE):
+        try:
+            with open(SETTINGS_FILE, "r") as f:
+                settings = json.load(f)
+        except Exception:
+            settings = {}
+    else:
+        settings = {}
+
+    def_uuid = time.strftime("%Y-%m-") + "".join(random.choices(string.ascii_uppercase + string.digits, k=11))
+    base_defaults = {
+        "api": False,
+        "authentication.api": False,
+        "authentication.m3u": False,
+        "authentication.pms": False,
+        "authentication.web": False,
+        "authentication.xml": False,
+        "backup.keep": 10,
+        "backup.path": "/home/threadfin/conf/backup/",
+        "git.branch": "MAIN",
+        "buffer": seed.get("buffer", "ffmpeg"),
+        "buffer.size.kb": 1024,
+        "buffer.timeout": 500,
+        "cache.images": False,
+        "epgSource": seed.get("epgSource", "XEPG"),
+        "ffmpeg.options": seed.get("ffmpegOptions", "-hide_banner -loglevel error -i [URL] -c copy -f mpegts pipe:1"),
+        "ffmpeg.path": seed.get("ffmpegPath", "/usr/bin/ffmpeg"),
+        "ffmpeg.forceHttp": seed.get("ffmpegForceHttp", False),
+        "vlc.options": "-I dummy [URL] --sout #std{mux=ts,access=file,dst=-}",
+        "vlc.path": "/usr/bin/cvlc",
+        "files": {"hdhr": {}, "m3u": {}, "xmltv": {}},
+        "filter": {},
+        "language": "en",
+        "log.entries.ram": 500,
+        "m3u8.adaptive.bandwidth.mbps": 10,
+        "mapping.first.channel": 1000,
+        "port": "34400",
+        "ssdp": True,
+        "temp.path": "/tmp/threadfin/",
+        "tuner": seed.get("tuner", 1),
+        "update": ["0000"],
+        "user.agent": "Threadfin",
+        "uuid": def_uuid,
+        "udpxy": "",
+        "version": "0.5.0",
+        "xepg.replace.missing.images": True,
+        "xepg.replace.channel.title": False,
+        "ThreadfinAutoUpdate": False,
+        "storeBufferInRAM": True,
+        "forceHttps": False,
+        "httpsPort": 443,
+        "bindIpAddress": "0.0.0.0",
+        "httpsThreadfinDomain": "",
+        "httpThreadfinDomain": "",
+        "enableNonAscii": False,
+        "epgCategories": "Kids:kids|News:news|Movie:movie|Series:series|Sports:sports",
+        "epgCategoriesColors": "kids:mediumpurple|news:tomato|movie:royalblue|series:gold|sports:yellowgreen",
+        "dummy": False,
+        "dummyChannel": "",
+        "ignoreFilters": False
+    }
+
+    for k, v in base_defaults.items():
+        if k not in settings or settings[k] == "" or settings[k] is None:
+            settings[k] = v
+
+    settings["buffer"] = seed.get("buffer", settings.get("buffer", "ffmpeg"))
+    settings["epgSource"] = seed.get("epgSource", "XEPG")
+    settings["dummy"] = seed.get("dummy", True)
+    settings["ffmpeg.forceHttp"] = seed.get("ffmpegForceHttp", False)
+    settings["ffmpeg.options"] = seed.get("ffmpegOptions", "-hide_banner -loglevel error -i [URL] -c copy -f mpegts pipe:1")
+    settings["ffmpeg.path"] = seed.get("ffmpegPath", "/usr/bin/ffmpeg")
+    settings["httpThreadfinDomain"] = "tv-gateway.media-server:34400"
+    settings["ignoreFilters"] = seed.get("ignoreFilters", True)
+    settings["tuner"] = seed.get("tuner", settings.get("tuner", 1))
+    settings["ThreadfinAutoUpdate"] = False
+
+    files_dict = settings.setdefault("files", {})
+    m3u_dict = files_dict.setdefault("m3u", {})
+
+    custom_m3u_ids = set()
+    for cm in seed.get("customM3U", []):
+        cid = cm.get("id")
+        if not cid:
+            continue
+        custom_m3u_ids.add(cid)
+        m3u_file = os.path.join(DATA_DIR, f"{cid}.m3u")
+        lines = ["#EXTM3U"]
+        for st in cm.get("streams", []):
+            s_name = st.get("name", "Stream")
+            s_url = st.get("url", "")
+            s_logo = st.get("logo", "")
+            s_group = st.get("group", "")
+            s_tvgid = st.get("tvgId", "")
+            lines.append(f'#EXTINF:-1 tvg-id="{s_tvgid}" tvg-name="{s_name}" tvg-logo="{s_logo}" group-title="{s_group}",{s_name}')
+            lines.append(s_url)
+        try:
+            with open(m3u_file, "w") as f:
+                f.write("\n".join(lines) + "\n")
+        except Exception as e:
+            print(f"Error writing custom M3U {cid}: {e}")
+
+        existing = m3u_dict.get(cid, {})
+        m3u_dict[cid] = {
+            "id.provider": cid,
+            "name": cm.get("name", cid),
+            "description": cm.get("description", ""),
+            "file.source": m3u_file,
+            "file.threadfin": f"{cid}.m3u",
+            "type": "m3u",
+            "buffer": cm.get("buffer", "FFmpeg"),
+            "http_proxy.ip": cm.get("httpProxyIp", ""),
+            "http_proxy.port": str(cm.get("httpProxyPort", "")),
+            "http_headers.origin": cm.get("origin", ""),
+            "http_headers.referer": cm.get("referer", ""),
+            "tuner": cm.get("tuner", 1),
+            "provider.availability": 100,
+            "counter.download": existing.get("counter.download", 1),
+            "counter.error": 0,
+            "compatibility": existing.get("compatibility", {
+                "group.title": 100,
+                "stream.id": 100,
+                "streams": len(cm.get("streams", [])),
+                "tvg.id": 100
+            })
+        }
+
+    for p in seed.get("playlists", []):
+        pid = p["id"]
+        purl = p["url"]
+        m3u_file = os.path.join(DATA_DIR, f"{pid}.m3u")
+
+        # Download and sanitize remote M3Us to ensure full compatibility with Threadfin parser
+        if purl.startswith("http://") or purl.startswith("https://"):
+            try:
+                req = urllib.request.Request(purl, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    raw_content = resp.read().decode("utf-8", errors="ignore")
+
+                sanitized_lines = ["#EXTM3U"]
+                for line in raw_content.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith("#EXTINF:"):
+                        if 'tvg-name=' not in line and 'group-title=' not in line:
+                            parts = line.split(",", 1)
+                            c_title = parts[1].strip() if len(parts) > 1 else "Channel"
+                            sanitized_lines.append(f'#EXTINF:-1 tvg-id="" tvg-name="{c_title}" group-title="AceStream",{c_title}')
+                        else:
+                            sanitized_lines.append(line)
+                    elif line.startswith("#"):
+                        if not line.startswith("#EXTM3U"):
+                            sanitized_lines.append(line)
+                    else:
+                        sanitized_lines.append(line)
+
+                with open(m3u_file, "w") as f:
+                    f.write("\n".join(sanitized_lines) + "\n")
+                print(f"Downloaded and formatted playlist {pid} ({len(sanitized_lines)} lines).")
+            except Exception as e:
+                print(f"Warning downloading playlist {pid} from {purl}: {e}")
+
+        existing = m3u_dict.get(pid, {})
+        m3u_dict[pid] = {
+            "id.provider": pid,
+            "name": p.get("name", pid),
+            "description": p.get("description", ""),
+            "file.source": m3u_file if os.path.exists(m3u_file) else purl,
+            "file.threadfin": f"{pid}.m3u",
+            "type": "m3u",
+            "buffer": p.get("buffer", "FFmpeg"),
+            "http_proxy.ip": p.get("httpProxyIp", ""),
+            "http_proxy.port": str(p.get("httpProxyPort", "")),
+            "http_headers.origin": p.get("origin", ""),
+            "http_headers.referer": p.get("referer", ""),
+            "tuner": p.get("tuner", 1),
+            "provider.availability": 100,
+            "counter.download": existing.get("counter.download", 1),
+            "counter.error": 0,
+            "compatibility": existing.get("compatibility", {
+                "group.title": 100,
+                "stream.id": 100,
+                "streams": 0,
+                "tvg.id": 100
+            })
+        }
+
+    valid_m3u_keys = set(custom_m3u_ids) | {p["id"] for p in seed.get("playlists", [])}
+    for k in list(m3u_dict.keys()):
+        if k not in valid_m3u_keys:
+            del m3u_dict[k]
+
+    xmltv_dict = files_dict.setdefault("xmltv", {})
+    for x in seed.get("xmltv", []):
+        xid = x["id"]
+        existing_x = xmltv_dict.get(xid, {})
+        xmltv_dict[xid] = {
+            "id.provider": xid,
+            "name": x.get("name", xid),
+            "description": x.get("description", ""),
+            "file.source": x["url"],
+            "file.threadfin": f"{xid}.xml",
+            "type": "xmltv",
+            "http_proxy.ip": x.get("httpProxyIp", ""),
+            "http_proxy.port": str(x.get("httpProxyPort", "")),
+            "http_headers.origin": "",
+            "http_headers.referer": "",
+            "provider.availability": 100,
+            "counter.download": existing_x.get("counter.download", 0),
+            "counter.error": 0,
+            "compatibility": existing_x.get("compatibility", {
+                "channels": 0,
+                "program": 0
+            })
+        }
+
+    valid_xmltv_keys = {x["id"] for x in seed.get("xmltv", [])}
+    for k in list(xmltv_dict.keys()):
+        if k not in valid_xmltv_keys:
+            del xmltv_dict[k]
+
+    settings["filter"] = {}
+    for i, f in enumerate(seed.get("filters", [])):
+        settings["filter"][str(i)] = {
+            "name": f.get("name", "Filter"),
+            "filter": f.get("filter", "Sports"),
+            "type": f.get("type", "group-title"),
+            "startingNumber": str(f.get("startingNumber", "1000")),
+            "caseSensitive": f.get("caseSensitive", False),
+            "description": f.get("description", ""),
+            "exclude": f.get("exclude", ""),
+            "include": f.get("include", ""),
+            "liveEvent": f.get("liveEvent", False),
+            "x-category": f.get("category", "")
+        }
+
+    if not os.path.exists(DATA_DIR) or len([f for f in os.listdir(DATA_DIR) if f.endswith('.m3u')]) == 0:
+        settings["files.update"] = True
+    else:
+        settings["files.update"] = False
+
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(settings, f, indent=2)
+
+    def normalize(s):
+        if not s:
+            return ""
+        s = s.split("@")[0]
+        for tag in ["(1080p)", "(720p)", "(576p)", "(480p)", "[1080p]", "[720p]", "HD", "FHD", "SD", "UHD", "4K"]:
+            s = s.replace(tag, "")
+        return "".join(c.lower() for c in s if c.isalnum())
+
+    xmltv_map = {}
+    if os.path.exists(DATA_DIR):
+        for fname in os.listdir(DATA_DIR):
+            if fname.endswith(".xml") and fname != "threadfin.xml":
+                fpath = os.path.join(DATA_DIR, fname)
+                try:
+                    for event, elem in ET.iterparse(fpath, events=("end",)):
+                        if elem.tag == "channel":
+                            cid = elem.attrib.get("id", "")
+                            if cid:
+                                n_cid = normalize(cid)
+                                if n_cid and n_cid not in xmltv_map:
+                                    xmltv_map[n_cid] = (fname, cid)
+                                for disp in elem.findall("display-name"):
+                                    if disp.text:
+                                        n_disp = normalize(disp.text)
+                                        if n_disp and n_disp not in xmltv_map:
+                                            xmltv_map[n_disp] = (fname, cid)
+                            elem.clear()
+                except Exception as e:
+                    print(f"Warning reading XMLTV {fname}: {e}")
+
+    curated_rules_raw = seed.get("curatedRules", [])
+    curated_rules = []
+    for r in curated_rules_raw:
+        curated_rules.append((r["pattern"], int(r["channel"]), r.get("group", "")))
+
+    logos_map = {}
+    for k, v in seed.get("logos", {}).items():
+        try:
+            logos_map[int(k)] = v
+        except ValueError:
+            pass
+
+    stream_overrides = {}
+    for k, v in seed.get("streamOverrides", {}).items():
+        try:
+            stream_overrides[int(k)] = v
+        except ValueError:
+            pass
+
+    if os.path.exists(XEPG_FILE) and curated_rules:
+        try:
+            with open(XEPG_FILE, "r") as f:
+                xepg = json.load(f)
+
+            used_channel_numbers = set()
+            activated_count = 0
+            epg_matched_count = 0
+
+            sorted_xepg_items = sorted(
+                xepg.items(),
+                key=lambda item: 0 if (isinstance(item[1], dict) and item[1].get("_file.m3u.id") in custom_m3u_ids) else 1
+            )
+
+            for k, v in sorted_xepg_items:
+                if not isinstance(v, dict):
+                    continue
+
+                name_str = (v.get("name", "") + " " + v.get("tvg-name", "")).lower()
+
+                matched_rule = None
+                for pat, chno, grp in sorted(curated_rules, key=lambda x: len(x[0]), reverse=True):
+                    pattern_re = r'(?:^|\b|\s|_)' + re.escape(pat) + r'(?:$|\b|\s|_)'
+                    if re.search(pattern_re, name_str):
+                        matched_rule = (pat, chno, grp)
+                        break
+
+                if matched_rule:
+                    pat, chno, grp = matched_rule
+                    if chno in used_channel_numbers:
+                        v["x-active"] = False
+                        v["x-hide-channel"] = True
+                        continue
+
+                    used_channel_numbers.add(chno)
+                    final_chno = str(chno)
+
+                    v["x-active"] = True
+                    v["x-hide-channel"] = False
+                    v["x-channelID"] = final_chno
+                    v["tvg-chno"] = final_chno
+                    v["x-group-title"] = grp
+                    v["group-title"] = grp
+
+                    if chno in stream_overrides:
+                        v["url"] = stream_overrides[chno]
+
+                    if chno in logos_map:
+                        v["tvg-logo"] = logos_map[chno]
+                        v["x-update-channel-icon"] = False
+                    elif v.get("tvg-logo"):
+                        v["x-update-channel-icon"] = False
+
+                    match = None
+                    for key in ["tvg-id", "tvg-name", "name"]:
+                        val = v.get(key)
+                        if val:
+                            n_val = normalize(val)
+                            if n_val in xmltv_map:
+                                match = xmltv_map[n_val]
+                                break
+
+                    if match:
+                        v["x-xmltv-file"] = match[0]
+                        v["x-mapping"] = match[1]
+                        epg_matched_count += 1
+                    else:
+                        v["x-xmltv-file"] = "Dummy"
+                        v["x-mapping"] = "Dummy"
+
+                    activated_count += 1
+                else:
+                    v["x-active"] = False
+                    v["x-hide-channel"] = True
+
+            with open(XEPG_FILE, "w") as f:
+                json.dump(xepg, f, indent=2)
+            print(f"Curated {activated_count} active channels ({epg_matched_count} mapped to real EPGs, {len(xepg) - activated_count} hidden).")
+        except Exception as e:
+            print(f"Error curating xepg.json: {e}")
+
+    print("Threadfin configuration seeded and merged successfully.")
+{{- end }}

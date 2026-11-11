@@ -1,0 +1,36 @@
+{{- if .Values.threadfin.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}-threadfin
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: threadfin
+spec:
+  type: {{ .Values.threadfin.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.threadfin.service.port | default 34400 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tv-gateway.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: threadfin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.threadfin.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.threadfin.service.port | default 34400 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tv-gateway.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: threadfin
+{{- end }}

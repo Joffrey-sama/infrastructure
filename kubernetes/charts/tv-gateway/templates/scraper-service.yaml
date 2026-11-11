@@ -1,0 +1,28 @@
+{{- if .Values.scraper.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}-scraper
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scraper
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.scraper.port | default 8000 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 6878
+      targetPort: ace-http
+      protocol: TCP
+      name: ace-http
+    - port: 8080
+      targetPort: acexy
+      protocol: TCP
+      name: acexy
+  selector:
+    {{- include "tv-gateway.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: scraper
+{{- end }}
+
