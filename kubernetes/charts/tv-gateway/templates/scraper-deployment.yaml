@@ -1,0 +1,128 @@
+{{- if .Values.scraper.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}-scraper
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scraper
+spec:
+{{- if hasKey .Values.scraper "replicas" }}
+  replicas: {{ .Values.scraper.replicas }}
+{{- else }}
+  replicas: 1
+{{- end }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "tv-gateway.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: scraper
+  template:
+    metadata:
+      {{- if .Values.scraper.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.scraper.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "tv-gateway.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: scraper
+        {{- if .Values.scraper.podLabels }}
+        {{- toYaml .Values.scraper.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      containers:
+        {{- if and .Values.scraper.gluetun .Values.scraper.gluetun.enabled }}
+        - name: gluetun
+          image: "{{ .Values.scraper.gluetun.image.repository }}:{{ .Values.scraper.gluetun.image.tag }}"
+          imagePullPolicy: {{ .Values.scraper.gluetun.image.pullPolicy | default "IfNotPresent" }}
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          env:
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.scraper.gluetun.vpnServiceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.scraper.gluetun.vpnType | quote }}
+            - name: SERVER_COUNTRIES
+              value: {{ .Values.scraper.gluetun.serverCountries | default "" | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.scraper.gluetun.secret.name }}
+                  key: {{ .Values.scraper.gluetun.secret.privateKeyKey }}
+            - name: WIREGUARD_PRESHARED_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.scraper.gluetun.secret.name }}
+                  key: {{ .Values.scraper.gluetun.secret.presharedKeyKey }}
+            - name: WIREGUARD_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.scraper.gluetun.secret.name }}
+                  key: {{ .Values.scraper.gluetun.secret.publicKeyKey }}
+            - name: WIREGUARD_MTU
+              value: {{ .Values.scraper.gluetun.wireguardMtu | default "1320" | quote }}
+            - name: DNS_UPSTREAM_PLAIN_ADDRESSES
+              value: {{ .Values.scraper.gluetun.dnsUpstreamAddresses | default "10.128.0.1:53" | quote }}
+            - name: HEALTH_TARGET_ADDRESSES
+              value: {{ .Values.scraper.gluetun.healthTargetAddresses | default "10.128.0.1:53" | quote }}
+            - name: DOTRP_LOCAL_NETWORK
+              value: {{ .Values.scraper.gluetun.localNetwork | default "10.42.0.0/16,10.43.0.0/16,192.168.1.0/24" | quote }}
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: {{ .Values.scraper.gluetun.outboundSubnets | default "10.42.0.0/16,10.43.0.0/16,192.168.1.0/24" | quote }}
+            - name: FIREWALL_INPUT_PORTS
+              value: {{ .Values.scraper.gluetun.firewallInputPorts | default "8000,6878" | quote }}
+            - name: FIREWALL_VPN_INPUT_PORTS
+              value: {{ .Values.scraper.gluetun.firewallVpnInputPorts | default "8621" | quote }}
+            - name: HTTPPROXY
+              value: "off"
+            - name: SHADOWSOCKS
+              value: "off"
+            {{- range $k, $v := .Values.scraper.gluetun.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.scraper.gluetun.resources | nindent 12 }}
+        {{- end }}
+        - name: scraper
+          image: "{{ .Values.scraper.image.repository }}:{{ .Values.scraper.image.tag }}"
+          imagePullPolicy: {{ .Values.scraper.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.scraper.port | default 8000 }}
+              protocol: TCP
+            - name: ace-http
+              containerPort: 6878
+              protocol: TCP
+            - name: acexy
+              containerPort: 8080
+              protocol: TCP
+            - name: ace-p2p
+              containerPort: 8621
+              protocol: TCP
+          env:
+            - name: FLASK_PORT
+              value: {{ .Values.scraper.port | default 8000 | quote }}
+            {{- range .Values.scraper.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.scraper.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.scraper.persistence.enabled }}
+            - name: config
+              mountPath: /app/config
+            {{- end }}
+      volumes:
+        {{- if .Values.scraper.persistence.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "tv-gateway.fullname" . }}-scraper-config
+        {{- else }}
+        - name: config
+          emptyDir: {}
+        {{- end }}
+{{- end }}

@@ -1,13 +1,16 @@
-{{- range .Values.iptv_instances }}
----
+{{- if .Values.threadfin.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ $.Release.Name }}-threadfin-{{ .name }}-config
+  name: {{ include "tv-gateway.fullname" . }}-config
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: threadfin
 spec:
-  accessModes: ["ReadWriteOnce"]
-  storageClassName: "local-path" # Standard local-path storage class
+  accessModes:
+    - {{ .Values.threadfin.persistence.accessMode | default "ReadWriteOnce" }}
+  storageClassName: {{ .Values.threadfin.persistence.storageClass | default .Values.global.storageClass | default "local-path" | quote }}
   resources:
     requests:
-      storage: 1Gi
+      storage: {{ .Values.threadfin.persistence.size | default "1Gi" }}
 {{- end }}

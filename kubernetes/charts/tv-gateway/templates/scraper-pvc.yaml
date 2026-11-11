@@ -1,0 +1,21 @@
+{{- if and .Values.scraper.enabled .Values.scraper.persistence.enabled (not .Values.scraper.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}-scraper-config
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scraper
+spec:
+  accessModes:
+    - {{ .Values.scraper.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.scraper.persistence.size | default "1Gi" }}
+  {{- if .Values.scraper.persistence.storageClass }}
+  storageClassName: {{ .Values.scraper.persistence.storageClass | quote }}
+  {{- else if .Values.global.storageClass }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  {{- end }}
+{{- end }}
+

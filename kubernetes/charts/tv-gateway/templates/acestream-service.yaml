@@ -1,0 +1,20 @@
+{{- if .Values.acestream.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}-acestream
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: acestream
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.acestream.port | default 6878 }}
+      targetPort: {{ .Values.acestream.port | default 6878 }}
+      protocol: TCP
+  selector:
+    {{- include "tv-gateway.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: acestream
+{{- end }}
+

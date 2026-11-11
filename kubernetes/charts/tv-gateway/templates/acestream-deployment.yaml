@@ -1,0 +1,105 @@
+{{- if .Values.acestream.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}-acestream
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: acestream
+spec:
+{{- if hasKey .Values.acestream "replicas" }}
+  replicas: {{ .Values.acestream.replicas }}
+{{- else }}
+  replicas: 1
+{{- end }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "tv-gateway.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: acestream
+  template:
+    metadata:
+      {{- if .Values.acestream.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.acestream.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "tv-gateway.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: acestream
+        {{- if .Values.acestream.podLabels }}
+        {{- toYaml .Values.acestream.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      containers:
+        {{- if .Values.acestream.gluetun.enabled }}
+        - name: gluetun
+          image: "{{ .Values.acestream.gluetun.image.repository }}:{{ .Values.acestream.gluetun.image.tag }}"
+          imagePullPolicy: {{ .Values.acestream.gluetun.image.pullPolicy | default "IfNotPresent" }}
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          env:
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.acestream.gluetun.vpnServiceProvider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.acestream.gluetun.vpnType | quote }}
+            - name: SERVER_COUNTRIES
+              value: {{ .Values.acestream.gluetun.serverCountries | quote }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.acestream.gluetun.secret.name }}
+                  key: {{ .Values.acestream.gluetun.secret.privateKeyKey }}
+            - name: WIREGUARD_PRESHARED_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.acestream.gluetun.secret.name }}
+                  key: {{ .Values.acestream.gluetun.secret.presharedKeyKey }}
+            - name: WIREGUARD_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.acestream.gluetun.secret.name }}
+                  key: {{ .Values.acestream.gluetun.secret.publicKeyKey }}
+            - name: WIREGUARD_MTU
+              value: {{ .Values.acestream.gluetun.wireguardMtu | quote }}
+            - name: DNS_UPSTREAM_PLAIN_ADDRESSES
+              value: {{ .Values.acestream.gluetun.dnsUpstreamAddresses | quote }}
+            - name: HEALTH_TARGET_ADDRESSES
+              value: {{ .Values.acestream.gluetun.healthTargetAddresses | quote }}
+            - name: DOTRP_LOCAL_NETWORK
+              value: {{ .Values.acestream.gluetun.localNetwork | quote }}
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: {{ .Values.acestream.gluetun.outboundSubnets | quote }}
+            - name: FIREWALL_INPUT_PORTS
+              value: {{ .Values.acestream.gluetun.firewallInputPorts | quote }}
+            - name: FIREWALL_VPN_INPUT_PORTS
+              value: {{ .Values.acestream.gluetun.firewallVpnInputPorts | quote }}
+            - name: HTTPPROXY
+              value: "off"
+            - name: SHADOWSOCKS
+              value: "off"
+            {{- range $k, $v := .Values.acestream.gluetun.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.acestream.gluetun.resources | nindent 12 }}
+        {{- end }}
+        - name: acestream
+          image: "{{ .Values.acestream.image.repository }}:{{ .Values.acestream.image.tag }}"
+          imagePullPolicy: {{ .Values.acestream.image.pullPolicy | default "IfNotPresent" }}
+          env:
+            - name: ALLOW_REMOTE_ACCESS
+              value: "yes"
+          ports:
+            - name: http
+              containerPort: {{ .Values.acestream.port | default 6878 }}
+              protocol: TCP
+            - name: p2p
+              containerPort: {{ .Values.acestream.torrentPort | default 8621 }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.acestream.resources | nindent 12 }}
+{{- end }}
+

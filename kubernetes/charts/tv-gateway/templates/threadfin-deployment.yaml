@@ -1,0 +1,119 @@
+{{- if .Values.threadfin.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tv-gateway.fullname" . }}-threadfin
+  labels:
+    {{- include "tv-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: threadfin
+spec:
+{{- if hasKey .Values.threadfin "replicas" }}
+  replicas: {{ .Values.threadfin.replicas }}
+{{- else }}
+  replicas: 1
+{{- end }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "tv-gateway.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: threadfin
+  template:
+    metadata:
+      {{- if .Values.threadfin.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.threadfin.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "tv-gateway.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: threadfin
+        {{- if .Values.threadfin.podLabels }}
+        {{- toYaml .Values.threadfin.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.threadfin.config.enabled }}
+      initContainers:
+        - name: init-seed-config
+          image: "{{ .Values.threadfin.image.repository }}:{{ .Values.threadfin.image.tag }}"
+          imagePullPolicy: {{ .Values.threadfin.image.pullPolicy | default "IfNotPresent" }}
+          command:
+            - python3
+            - /etc/threadfin/seed/merge-config.py
+          volumeMounts:
+            - name: seed-config
+              mountPath: /etc/threadfin/seed/
+            - name: config
+              mountPath: /home/threadfin/conf/
+      {{- end }}
+      containers:
+        - name: threadfin
+          image: "{{ .Values.threadfin.image.repository }}:{{ .Values.threadfin.image.tag }}"
+          imagePullPolicy: {{ .Values.threadfin.image.pullPolicy | default "IfNotPresent" }}
+          env:
+            - name: THREADFIN_BIND
+              value: "0.0.0.0"
+            - name: THREADFIN_PORT
+              value: {{ .Values.threadfin.service.port | default 34400 | quote }}
+            {{- if .Values.threadfin.proxy.enabled }}
+            {{- if .Values.threadfin.proxy.allProxy }}
+            - name: ALL_PROXY
+              value: {{ .Values.threadfin.proxy.allProxy | quote }}
+            - name: all_proxy
+              value: {{ .Values.threadfin.proxy.allProxy | quote }}
+            {{- end }}
+            - name: HTTP_PROXY
+              value: {{ .Values.threadfin.proxy.httpProxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.threadfin.proxy.httpsProxy | quote }}
+            - name: NO_PROXY
+              value: {{ .Values.threadfin.proxy.noProxy | quote }}
+            - name: http_proxy
+              value: {{ .Values.threadfin.proxy.httpProxy | quote }}
+            - name: https_proxy
+              value: {{ .Values.threadfin.proxy.httpsProxy | quote }}
+            - name: no_proxy
+              value: {{ .Values.threadfin.proxy.noProxy | quote }}
+            {{- end }}
+            {{- range .Values.threadfin.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.threadfin.service.port | default 34400 }}
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.threadfin.service.port | default 34400 }}
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.threadfin.service.port | default 34400 }}
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.threadfin.service.port | default 34400 }}
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.threadfin.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.threadfin.persistence.enabled }}
+            - name: config
+              mountPath: /home/threadfin/conf/
+            {{- end }}
+      volumes:
+        {{- if .Values.threadfin.config.enabled }}
+        - name: seed-config
+          configMap:
+            name: {{ include "tv-gateway.fullname" . }}-seed
+        {{- end }}
+        {{- if .Values.threadfin.persistence.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "tv-gateway.fullname" . }}-config
+        {{- end }}
+{{- end }}
