@@ -99,7 +99,7 @@ jobs:
   helm-publish:
     name: "Package, Tag & Push to GHCR"
     needs: helm-lint
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
@@ -126,7 +126,11 @@ jobs:
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           mkdir -p .helm-packages
 
-          MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          if [ -n "${{ inputs.chart_dir }}" ]; then
+            MODIFIED_FILES="${{ inputs.chart_dir }}"
+          else
+            MODIFIED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
 
           echo "=== Adding Helm repositories ==="
           helm repo add bjw-s https://bjw-s-labs.github.io/helm-charts/ || true
