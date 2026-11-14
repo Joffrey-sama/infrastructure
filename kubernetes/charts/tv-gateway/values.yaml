@@ -67,7 +67,7 @@ acestream:
   replicas: 1
   image:
     repository: ghcr.io/martinbjeldbak/acestream-http-proxy
-    tag: "3.4.0"
+    tag: "3.5.1"
     pullPolicy: IfNotPresent
   port: 6878
   torrentPort: 8621
