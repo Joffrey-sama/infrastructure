@@ -1,6 +1,6 @@
 apiVersion: v2
 name: monitoring
-version: 1.1.0
+version: 1.2.0
 dependencies:
   - name: grafana
     version: "12.3.0"
@@ -24,3 +24,7 @@ dependencies:
     version: "11.10.0"
     repository: "https://prometheus-community.github.io/helm-charts/"
     tags: ["collector", "watcher"]
+  - name: helm-exporter
+    version: "1.4.0"
+    repository: "https://shanestarcher.com/helm-charts/"
+    tags: ["collector"]
