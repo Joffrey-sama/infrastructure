@@ -164,7 +164,6 @@ jobs:
                   exit 1
                 fi
 
-                helm dependency build "${chart_dir}"
                 helm package "${chart_dir}" --destination .helm-packages
 
                 PKG_FILE=".helm-packages/${CHART_NAME}-${CHART_VERSION}.tgz"
