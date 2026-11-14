@@ -113,7 +113,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/sabnzbd
-            tag: release-4.3.2
+            tag: release-4.3.3
 
           env:
             - name: SABNZBD__HOST_WHITELIST
