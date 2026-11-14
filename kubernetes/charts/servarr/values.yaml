@@ -130,7 +130,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/sonarr
-            tag: release-4.0.13.2932
+            tag: release-4.0.20.3014
           probes:
             liveness:
               enabled: true
