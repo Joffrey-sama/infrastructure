@@ -120,3 +120,17 @@ resource "grafana_dashboard" "custom" {
   ]
 }
 
+# Organization preferences (Home dashboard, theme, etc.)
+resource "grafana_organization_preferences" "default" {
+  count              = var.home_dashboard_uid != null ? 1 : 0
+  home_dashboard_uid = var.home_dashboard_uid
+  theme              = "dark"
+  week_start         = "monday"
+
+  depends_on = [
+    grafana_dashboard.imported,
+    grafana_dashboard.custom
+  ]
+}
+
+
