@@ -66,3 +66,9 @@ variable "notification_repeat_interval" {
   type        = string
   default     = "1d"
 }
+
+variable "home_dashboard_uid" {
+  description = "UID of the dashboard to set as home dashboard for the organization"
+  type        = string
+  default     = null
+}
