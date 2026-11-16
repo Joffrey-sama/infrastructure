@@ -1,6 +1,6 @@
 apiVersion: v2
 name: monitoring
-version: 1.2.0
+version: 1.2.1
 dependencies:
   - name: grafana
     version: "12.3.0"
@@ -27,4 +27,4 @@ dependencies:
   - name: helm-exporter
     version: "1.4.0"
     repository: "https://shanestarcher.com/helm-charts/"
-    tags: ["collector"]
+    tags: ["collector", "watcher"]
