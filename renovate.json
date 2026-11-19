@@ -55,7 +55,7 @@
       ]
     },
     {
-      "matchManagers": ["helmv3", "helm-v3", "helm-values", "helmfile", "helm-requirements"],
+      "matchManagers": ["helmv3", "helm-values", "helmfile", "helm-requirements"],
       "addLabels": ["renovate", "helm"],
       "bumpVersions": [
         {
@@ -67,7 +67,7 @@
       ]
     },
     {
-      "matchManagers": ["terraform", "terraform-version", "terraform-vars", "terragrunt", "terragrunt-version", "tflint-plugin"],
+      "matchManagers": ["terraform", "terraform-version", "terragrunt", "terragrunt-version", "tflint-plugin"],
       "addLabels": ["renovate", "terraform"],
       "bumpVersions": [
         {
