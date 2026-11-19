@@ -365,6 +365,28 @@ locals {
       category    = "storage"
       summary     = "PVC out of inodes"
       description = "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} has less than 3% inodes free."
+    },
+    {
+      name        = "VolSyncVolumeOutOfSync"
+      expr        = "max by (obj_namespace, obj_name) (volsync_volume_out_of_sync)"
+      threshold   = 0
+      operator    = "gt"
+      for         = "15m"
+      severity    = "warning"
+      category    = "storage"
+      summary     = "VolSync volume out of sync"
+      description = "VolSync ReplicationSource {{ $labels.obj_namespace }}/{{ $labels.obj_name }} has been out of sync for more than 15 minutes."
+    },
+    {
+      name        = "VolSyncMissedSchedule"
+      expr        = "max by (obj_namespace, obj_name) (increase(volsync_missed_intervals_total[1h]))"
+      threshold   = 0
+      operator    = "gt"
+      for         = "5m"
+      severity    = "warning"
+      category    = "storage"
+      summary     = "VolSync missed scheduled backup"
+      description = "VolSync ReplicationSource {{ $labels.obj_namespace }}/{{ $labels.obj_name }} missed a scheduled backup interval."
     }
   ]
 
@@ -552,9 +574,9 @@ locals {
     },
     {
       name        = "MonitoringStorageDown"
-      expr        = "probe_success{instance=\"greptimedb-internal\"} < 1"
-      threshold   = 0
-      operator    = "gt"
+      expr        = "probe_success{instance=\"greptimedb-internal\"}"
+      threshold   = 1
+      operator    = "lt"
       for         = "1m"
       severity    = "critical"
       category    = "monitoring"
