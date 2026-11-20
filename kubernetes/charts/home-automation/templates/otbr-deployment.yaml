@@ -40,20 +40,22 @@ spec:
           env:
             - name: TZ
               value: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
-            - name: OT_INFRA_IF
+            - name: OTBR_BACKBONE_IF
               value: {{ .Values.otbr.backboneInterface | default "eno1" | quote }}
-            - name: OT_THREAD_IF
-              value: {{ .Values.otbr.threadInterface | default "wpan0" | quote }}
-            - name: OT_RCP_DEVICE
-              value: "spinel+hdlc+uart://{{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" }}?uart-baudrate={{ .Values.otbr.rcpDevice.baudrate | default 115200 }}{{- if .Values.otbr.rcpDevice.flowControl }}&uart-flow-control{{- end }}"
-            - name: OT_REST_LISTEN_ADDR
-              value: "0.0.0.0"
-            - name: OT_REST_LISTEN_PORT
-              value: {{ .Values.otbr.service.restPort | default 8081 | quote }}
-            - name: OT_WEB_LISTEN_ADDR
-              value: "0.0.0.0"
-            - name: OT_WEB_LISTEN_PORT
+            - name: OTBR_DEVICE
+              value: {{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" | quote }}
+            - name: OTBR_BAUDRATE
+              value: {{ .Values.otbr.rcpDevice.baudrate | default 115200 | quote }}
+            - name: OTBR_FLOW_CONTROL
+              value: {{ ternary "1" "0" (.Values.otbr.rcpDevice.flowControl | default false) | quote }}
+            - name: OTBR_WEB
+              value: "1"
+            - name: OTBR_WEB_PORT
               value: {{ .Values.otbr.service.webPort | default 8080 | quote }}
+            - name: OTBR_REST_PORT
+              value: {{ .Values.otbr.service.restPort | default 8081 | quote }}
+            - name: OTBR_NAT64
+              value: {{ ternary "1" "0" (.Values.otbr.nat64.enabled | default true) | quote }}
             {{- range .Values.otbr.extraEnv }}
             - name: {{ .name }}
               value: {{ .value | quote }}
