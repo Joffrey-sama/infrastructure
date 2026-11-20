@@ -1,4 +1,4 @@
-# Agent Rules — `infrastructure` (Public Context-Agnostic Repo)
+# Agent Rules - `infrastructure` (Public Context-Agnostic Repo)
 
 ## Communication & Language
 - **User chat**: Natural, concise French.
