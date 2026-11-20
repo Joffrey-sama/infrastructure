@@ -1,0 +1,23 @@
+{{- if and .Values.otbr.enabled .Values.otbr.route.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "home-automation.fullname" . }}-otbr
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otbr
+spec:
+  parentRefs:
+    - name: {{ .Values.otbr.route.gatewayName | default "internal-gateway" }}
+      namespace: {{ .Values.otbr.route.gatewayNamespace | default "common-services" }}
+  hostnames:
+    - {{ .Values.otbr.route.hostname | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "home-automation.fullname" . }}-otbr
+          port: {{ .Values.otbr.service.webPort | default 8080 }}
+{{- end }}

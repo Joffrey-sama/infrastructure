@@ -1,0 +1,23 @@
+{{- if .Values.mosquitto.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "home-automation.fullname" . }}-mosquitto
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mosquitto
+spec:
+  type: {{ .Values.mosquitto.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.mosquitto.service.port | default 1883 }}
+      targetPort: mqtt
+      protocol: TCP
+      name: mqtt
+    - port: {{ .Values.mosquitto.service.websocketPort | default 9001 }}
+      targetPort: websocket
+      protocol: TCP
+      name: websocket
+  selector:
+    {{- include "home-automation.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mosquitto
+{{- end }}

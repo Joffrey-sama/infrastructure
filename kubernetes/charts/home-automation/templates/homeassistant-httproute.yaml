@@ -1,0 +1,47 @@
+{{- if and .Values.homeassistant.enabled .Values.homeassistant.route.main.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "home-automation.fullname" . }}-ha-main
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: homeassistant
+spec:
+  parentRefs:
+    - name: {{ .Values.homeassistant.route.main.gatewayName | default "internal-gateway" }}
+      namespace: {{ .Values.homeassistant.route.main.gatewayNamespace | default "common-services" }}
+  hostnames:
+    - {{ .Values.homeassistant.route.main.hostname | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "home-automation.fullname" . }}-homeassistant
+          port: {{ .Values.homeassistant.service.port | default 8123 }}
+{{- end }}
+---
+{{- if and .Values.homeassistant.enabled .Values.homeassistant.route.public.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "home-automation.fullname" . }}-ha-public
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: homeassistant
+spec:
+  parentRefs:
+    - name: {{ .Values.homeassistant.route.public.gatewayName | default "public-gateway" }}
+      namespace: {{ .Values.homeassistant.route.public.gatewayNamespace | default "common-services" }}
+  hostnames:
+    - {{ .Values.homeassistant.route.public.hostname | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "home-automation.fullname" . }}-homeassistant
+          port: {{ .Values.homeassistant.service.port | default 8123 }}
+{{- end }}

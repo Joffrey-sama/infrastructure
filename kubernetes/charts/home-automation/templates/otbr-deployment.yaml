@@ -1,0 +1,87 @@
+{{- if .Values.otbr.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "home-automation.fullname" . }}-otbr
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otbr
+spec:
+  replicas: {{ .Values.otbr.replicas | default 1 }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "home-automation.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: otbr
+  template:
+    metadata:
+      {{- if .Values.otbr.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.otbr.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "home-automation.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: otbr
+        {{- if .Values.otbr.podLabels }}
+        {{- toYaml .Values.otbr.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      hostNetwork: {{ .Values.otbr.hostNetwork | default true }}
+      {{- if .Values.otbr.hostNetwork }}
+      dnsPolicy: {{ .Values.otbr.dnsPolicy | default "ClusterFirstWithHostNet" }}
+      {{- end }}
+      containers:
+        - name: otbr
+          image: "{{ .Values.otbr.image.repository }}:{{ .Values.otbr.image.tag }}"
+          imagePullPolicy: {{ .Values.otbr.image.pullPolicy | default "IfNotPresent" }}
+          securityContext:
+            privileged: true
+          env:
+            - name: TZ
+              value: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
+            - name: INFRA_IF_NAME
+              value: {{ .Values.otbr.backboneInterface | default "eth0" | quote }}
+            - name: THREAD_IF_NAME
+              value: {{ .Values.otbr.threadInterface | default "wpan0" | quote }}
+            - name: RADIO_URL
+              value: "spinel+hdlc+uart://{{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" }}?uart-baudrate={{ .Values.otbr.rcpDevice.baudrate | default 460800 }}{{- if .Values.otbr.rcpDevice.flowControl }}&uart-flow-control{{- end }}"
+            - name: NAT64
+              value: {{ ternary "1" "0" .Values.otbr.nat64.enabled | quote }}
+            - name: NAT64_PREFIX
+              value: {{ .Values.otbr.nat64.prefix | default "64:ff9b::/96" | quote }}
+            {{- range .Values.otbr.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - name: rest
+              containerPort: {{ .Values.otbr.service.restPort | default 8081 }}
+              protocol: TCP
+            - name: web
+              containerPort: {{ .Values.otbr.service.webPort | default 8080 }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.otbr.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.otbr.persistence.enabled }}
+            - name: data
+              mountPath: /var/lib/thread
+            {{- end }}
+            - name: rcp-device
+              mountPath: {{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" }}
+            - name: net-tun
+              mountPath: /dev/net/tun
+      volumes:
+        {{- if .Values.otbr.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "home-automation.fullname" . }}-otbr-data
+        {{- end }}
+        - name: rcp-device
+          hostPath:
+            path: {{ .Values.otbr.rcpDevice.hostPath }}
+        - name: net-tun
+          hostPath:
+            path: /dev/net/tun
+{{- end }}

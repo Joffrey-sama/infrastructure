@@ -1,0 +1,23 @@
+{{- if and .Values.zigbee2mqtt.enabled .Values.zigbee2mqtt.route.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "home-automation.fullname" . }}-zigbee2mqtt
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zigbee2mqtt
+spec:
+  parentRefs:
+    - name: {{ .Values.zigbee2mqtt.route.gatewayName | default "internal-gateway" }}
+      namespace: {{ .Values.zigbee2mqtt.route.gatewayNamespace | default "common-services" }}
+  hostnames:
+    - {{ .Values.zigbee2mqtt.route.hostname | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "home-automation.fullname" . }}-zigbee2mqtt
+          port: {{ .Values.zigbee2mqtt.service.port | default 8080 }}
+{{- end }}

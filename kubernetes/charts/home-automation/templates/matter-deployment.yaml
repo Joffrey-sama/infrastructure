@@ -1,0 +1,100 @@
+{{- if .Values.matterServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "home-automation.fullname" . }}-matter-server
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: matter-server
+spec:
+  replicas: {{ .Values.matterServer.replicas | default 1 }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "home-automation.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: matter-server
+  template:
+    metadata:
+      {{- if .Values.matterServer.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.matterServer.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "home-automation.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: matter-server
+        {{- if .Values.matterServer.podLabels }}
+        {{- toYaml .Values.matterServer.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      hostNetwork: {{ .Values.matterServer.hostNetwork | default true }}
+      {{- if .Values.matterServer.hostNetwork }}
+      dnsPolicy: {{ .Values.matterServer.dnsPolicy | default "ClusterFirstWithHostNet" }}
+      {{- end }}
+      containers:
+        - name: matter-server
+          image: "{{ .Values.matterServer.image.repository }}:{{ .Values.matterServer.image.tag }}"
+          imagePullPolicy: {{ .Values.matterServer.image.pullPolicy | default "IfNotPresent" }}
+          args:
+            - "--storage-path"
+            - "/data"
+            - "--port"
+            - {{ .Values.matterServer.service.port | default 5580 | quote }}
+            - "--log-level"
+            - {{ .Values.matterServer.logLevel | default "info" | quote }}
+            {{- if .Values.matterServer.primaryInterface }}
+            - "--primary-interface"
+            - {{ .Values.matterServer.primaryInterface | quote }}
+            {{- end }}
+            {{- range .Values.matterServer.args }}
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            - name: TZ
+              value: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
+            {{- range .Values.matterServer.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - name: ws
+              containerPort: {{ .Values.matterServer.service.port | default 5580 }}
+              protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.matterServer.service.port | default 5580 }}
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.matterServer.service.port | default 5580 }}
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.matterServer.service.port | default 5580 }}
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.matterServer.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.matterServer.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+            {{- if .Values.matterServer.dbus.enabled }}
+            - name: dbus
+              mountPath: /run/dbus
+              readOnly: true
+            {{- end }}
+      volumes:
+        {{- if .Values.matterServer.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "home-automation.fullname" . }}-matter-data
+        {{- end }}
+        {{- if .Values.matterServer.dbus.enabled }}
+        - name: dbus
+          hostPath:
+            path: {{ .Values.matterServer.dbus.hostPath | default "/run/dbus" }}
+            type: Directory
+        {{- end }}
+{{- end }}

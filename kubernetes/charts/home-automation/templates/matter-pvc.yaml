@@ -1,0 +1,16 @@
+{{- if and .Values.matterServer.enabled .Values.matterServer.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "home-automation.fullname" . }}-matter-data
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: matter-server
+spec:
+  accessModes:
+    - {{ .Values.matterServer.persistence.accessMode | default "ReadWriteOnce" }}
+  storageClassName: {{ .Values.matterServer.persistence.storageClass | default .Values.global.storageClass | default "local-path" | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.matterServer.persistence.size | default "1Gi" }}
+{{- end }}

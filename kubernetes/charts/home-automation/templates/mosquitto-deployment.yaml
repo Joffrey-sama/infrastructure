@@ -1,0 +1,68 @@
+{{- if .Values.mosquitto.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "home-automation.fullname" . }}-mosquitto
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mosquitto
+spec:
+  replicas: {{ .Values.mosquitto.replicas | default 1 }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "home-automation.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mosquitto
+  template:
+    metadata:
+      {{- if .Values.mosquitto.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.mosquitto.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "home-automation.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mosquitto
+        {{- if .Values.mosquitto.podLabels }}
+        {{- toYaml .Values.mosquitto.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      containers:
+        - name: mosquitto
+          image: "{{ .Values.mosquitto.image.repository }}:{{ .Values.mosquitto.image.tag }}"
+          imagePullPolicy: {{ .Values.mosquitto.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: mqtt
+              containerPort: {{ .Values.mosquitto.service.port | default 1883 }}
+              protocol: TCP
+            - name: websocket
+              containerPort: {{ .Values.mosquitto.service.websocketPort | default 9001 }}
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.mosquitto.service.port | default 1883 }}
+            periodSeconds: 15
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.mosquitto.service.port | default 1883 }}
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.mosquitto.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+            {{- if .Values.mosquitto.persistence.enabled }}
+            - name: data
+              mountPath: /mosquitto/data
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "home-automation.fullname" . }}-mosquitto-config
+        {{- if .Values.mosquitto.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "home-automation.fullname" . }}-mosquitto-data
+        {{- end }}
+{{- end }}

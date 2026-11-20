@@ -1,0 +1,16 @@
+{{- if and .Values.zigbee2mqtt.enabled .Values.zigbee2mqtt.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "home-automation.fullname" . }}-z2m-data
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zigbee2mqtt
+spec:
+  accessModes:
+    - {{ .Values.zigbee2mqtt.persistence.accessMode | default "ReadWriteOnce" }}
+  storageClassName: {{ .Values.zigbee2mqtt.persistence.storageClass | default .Values.global.storageClass | default "local-path" | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.zigbee2mqtt.persistence.size | default "1Gi" }}
+{{- end }}
