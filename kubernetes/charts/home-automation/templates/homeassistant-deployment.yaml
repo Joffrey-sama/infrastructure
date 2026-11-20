@@ -41,7 +41,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              mkdir -p /config/themes /config/packages /config/media
+              mkdir -p /config/themes /config/packages /config/media /config/.storage
               for f in automations.yaml scripts.yaml scenes.yaml; do
                 if [ ! -f "/config/$f" ]; then
                   echo "[]" > "/config/$f"
@@ -51,10 +51,13 @@ spec:
                 echo "{}" > "/config/customize.yaml"
               fi
               cp /tmp/ha-config/configuration.yaml /config/configuration.yaml
+              cp /tmp/ha-config/storage-http.json /config/.storage/http
               for pkg in /tmp/ha-config/*.yaml; do
-                pkg_name=$(basename "$pkg")
-                if [ "$pkg_name" != "configuration.yaml" ]; then
-                  cp "$pkg" "/config/packages/$pkg_name"
+                if [ -f "$pkg" ]; then
+                  pkg_name=$(basename "$pkg")
+                  if [ "$pkg_name" != "configuration.yaml" ]; then
+                    cp "$pkg" "/config/packages/$pkg_name"
+                  fi
                 fi
               done
           volumeMounts:
