@@ -1,7 +1,9 @@
 kyverno:
   enabled: true
+  upgrade:
+    acknowledgeLegacyPoliciesNotEnforced: true
   crds:
-    install: false
+    install: true
     migration:
       enabled: false
   config:
