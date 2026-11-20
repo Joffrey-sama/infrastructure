@@ -1,0 +1,145 @@
+{{- if .Values.homeassistant.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "home-automation.fullname" . }}-homeassistant
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: homeassistant
+spec:
+  replicas: {{ .Values.homeassistant.replicas | default 1 }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "home-automation.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: homeassistant
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/homeassistant-configmap.yaml") . | sha256sum }}
+        {{- if .Values.homeassistant.podAnnotations }}
+        {{- toYaml .Values.homeassistant.podAnnotations | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "home-automation.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: homeassistant
+        {{- if .Values.homeassistant.podLabels }}
+        {{- toYaml .Values.homeassistant.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      hostNetwork: {{ .Values.homeassistant.hostNetwork | default true }}
+      {{- if .Values.homeassistant.hostNetwork }}
+      dnsPolicy: {{ .Values.homeassistant.dnsPolicy | default "ClusterFirstWithHostNet" }}
+      {{- end }}
+      {{- if .Values.homeassistant.persistence.enabled }}
+      initContainers:
+        - name: init-config
+          image: "{{ .Values.homeassistant.image.repository }}:{{ .Values.homeassistant.image.tag }}"
+          imagePullPolicy: {{ .Values.homeassistant.image.pullPolicy | default "IfNotPresent" }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /config/themes /config/packages /config/media
+              for f in automations.yaml scripts.yaml scenes.yaml; do
+                if [ ! -f "/config/$f" ]; then
+                  echo "[]" > "/config/$f"
+                fi
+              done
+              if [ ! -f "/config/customize.yaml" ]; then
+                echo "{}" > "/config/customize.yaml"
+              fi
+              cp /tmp/ha-config/configuration.yaml /config/configuration.yaml
+              for pkg in /tmp/ha-config/*.yaml; do
+                pkg_name=$(basename "$pkg")
+                if [ "$pkg_name" != "configuration.yaml" ]; then
+                  cp "$pkg" "/config/packages/$pkg_name"
+                fi
+              done
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: ha-config
+              mountPath: /tmp/ha-config
+      {{- end }}
+      containers:
+        - name: homeassistant
+          image: "{{ .Values.homeassistant.image.repository }}:{{ .Values.homeassistant.image.tag }}"
+          imagePullPolicy: {{ .Values.homeassistant.image.pullPolicy | default "IfNotPresent" }}
+          {{- if .Values.homeassistant.usbDevice.enabled }}
+          securityContext:
+            privileged: true
+          {{- else }}
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          {{- end }}
+          env:
+            - name: TZ
+              value: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
+            {{- range .Values.homeassistant.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.homeassistant.service.port | default 8123 }}
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /manifest.json
+              port: {{ .Values.homeassistant.service.port | default 8123 }}
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /manifest.json
+              port: {{ .Values.homeassistant.service.port | default 8123 }}
+            periodSeconds: 20
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /manifest.json
+              port: {{ .Values.homeassistant.service.port | default 8123 }}
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.homeassistant.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.homeassistant.persistence.enabled }}
+            - name: config
+              mountPath: /config
+            {{- end }}
+            {{- if .Values.homeassistant.dbus.enabled }}
+            - name: dbus
+              mountPath: /run/dbus
+              readOnly: true
+            {{- end }}
+            {{- if .Values.homeassistant.usbDevice.enabled }}
+            - name: usb-device
+              mountPath: {{ .Values.homeassistant.usbDevice.mountPath | default .Values.homeassistant.usbDevice.hostPath }}
+            {{- end }}
+      volumes:
+        {{- if .Values.homeassistant.persistence.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "home-automation.fullname" . }}-ha-config
+        - name: ha-config
+          configMap:
+            name: {{ include "home-automation.fullname" . }}-ha-config
+        {{- end }}
+        {{- if .Values.homeassistant.dbus.enabled }}
+        - name: dbus
+          hostPath:
+            path: {{ .Values.homeassistant.dbus.hostPath | default "/run/dbus" }}
+            type: Directory
+        {{- end }}
+        {{- if .Values.homeassistant.usbDevice.enabled }}
+        - name: usb-device
+          hostPath:
+            path: {{ .Values.homeassistant.usbDevice.hostPath }}
+        {{- end }}
+{{- end }}

@@ -28,3 +28,9 @@
         - { key: "kernel.hung_task_panic", value: "1" } # Panic when tasks hang in D-state
         - { key: "kernel.hung_task_timeout_secs", value: "120" } # Timeout before declaring task hung
         - { key: "vm.panic_on_oom", value: "0" } # Let OOM killer work before panicking
+        - { key: "net.ipv6.conf.all.disable_ipv6", value: "0" } # Required for Matter & Thread IPv6
+        - { key: "net.ipv6.conf.all.forwarding", value: "1" } # Required for OpenThread Border Router (OTBR)
+        - { key: "net.ipv6.conf.default.forwarding", value: "1" } # Required for OpenThread Border Router (OTBR)
+        - { key: "net.ipv6.conf.all.accept_ra", value: "2" } # Accept Router Advertisements even when forwarding is enabled
+        - { key: "net.ipv6.conf.default.accept_ra", value: "2" } # Accept Router Advertisements even when forwarding is enabled
+        - { key: "net.ipv6.conf.all.accept_ra_rt_info_max_plen", value: "64" } # Accept Thread RIO /64 routes from OTBR

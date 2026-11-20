@@ -1,0 +1,88 @@
+{{- if .Values.zigbee2mqtt.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "home-automation.fullname" . }}-zigbee2mqtt
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zigbee2mqtt
+spec:
+  replicas: {{ .Values.zigbee2mqtt.replicas | default 1 }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "home-automation.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: zigbee2mqtt
+  template:
+    metadata:
+      {{- if .Values.zigbee2mqtt.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.zigbee2mqtt.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "home-automation.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: zigbee2mqtt
+        {{- if .Values.zigbee2mqtt.podLabels }}
+        {{- toYaml .Values.zigbee2mqtt.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      hostNetwork: {{ .Values.zigbee2mqtt.hostNetwork | default false }}
+      {{- if .Values.zigbee2mqtt.hostNetwork }}
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      containers:
+        - name: zigbee2mqtt
+          image: "{{ .Values.zigbee2mqtt.image.repository }}:{{ .Values.zigbee2mqtt.image.tag }}"
+          imagePullPolicy: {{ .Values.zigbee2mqtt.image.pullPolicy | default "IfNotPresent" }}
+          {{- if .Values.zigbee2mqtt.usbDevice.enabled }}
+          securityContext:
+            privileged: true
+          {{- end }}
+          env:
+            - name: TZ
+              value: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
+            {{- range .Values.zigbee2mqtt.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.zigbee2mqtt.service.port | default 8080 }}
+              protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.zigbee2mqtt.service.port | default 8080 }}
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.zigbee2mqtt.service.port | default 8080 }}
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.zigbee2mqtt.service.port | default 8080 }}
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.zigbee2mqtt.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.zigbee2mqtt.persistence.enabled }}
+            - name: data
+              mountPath: /app/data
+            {{- end }}
+            {{- if .Values.zigbee2mqtt.usbDevice.enabled }}
+            - name: usb-device
+              mountPath: {{ .Values.zigbee2mqtt.usbDevice.mountPath | default "/dev/ttyACM0" }}
+            {{- end }}
+      volumes:
+        {{- if .Values.zigbee2mqtt.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "home-automation.fullname" . }}-z2m-data
+        {{- end }}
+        {{- if .Values.zigbee2mqtt.usbDevice.enabled }}
+        - name: usb-device
+          hostPath:
+            path: {{ .Values.zigbee2mqtt.usbDevice.hostPath }}
+        {{- end }}
+{{- end }}

@@ -74,6 +74,14 @@
     proto: udp
     comment: 'Allow DNS (AdGuard Home)'
 
+- name: Allow incoming mDNS traffic for Home Assistant and Matter/Thread discovery
+  community.general.ufw:
+    rule: allow
+    port: '5353'
+    proto: udp
+    comment: 'Allow mDNS (Home Assistant / Matter / Thread)'
+
+
 - name: Disable swap immediately
   ansible.builtin.command: swapoff -a
   when: ansible_facts['swaptotal_mb'] | default(0) > 0

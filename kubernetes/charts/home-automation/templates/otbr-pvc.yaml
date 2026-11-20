@@ -1,0 +1,16 @@
+{{- if and .Values.otbr.enabled .Values.otbr.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "home-automation.fullname" . }}-otbr-data
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otbr
+spec:
+  accessModes:
+    - {{ .Values.otbr.persistence.accessMode | default "ReadWriteOnce" }}
+  storageClassName: {{ .Values.otbr.persistence.storageClass | default .Values.global.storageClass | default "local-path" | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.otbr.persistence.size | default "500Mi" }}
+{{- end }}

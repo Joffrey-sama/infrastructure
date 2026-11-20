@@ -1,0 +1,19 @@
+{{- if .Values.matterServer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "home-automation.fullname" . }}-matter-server
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: matter-server
+spec:
+  type: {{ .Values.matterServer.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.matterServer.service.port | default 5580 }}
+      targetPort: ws
+      protocol: TCP
+      name: ws
+  selector:
+    {{- include "home-automation.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: matter-server
+{{- end }}

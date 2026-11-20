@@ -1,0 +1,6 @@
+apiVersion: v2
+name: home-automation
+description: A Helm chart for Home Assistant, OpenThread Border Router (OTBR), Matter Server, Mosquitto, and Zigbee2MQTT
+type: application
+version: 0.1.0
+appVersion: "2026.11.0"

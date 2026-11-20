@@ -1,0 +1,234 @@
+global:
+  storageClass: "local-path"
+  timezone: "Europe/Paris"
+
+homeassistant:
+  enabled: true
+  replicas: 1
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  image:
+    repository: ghcr.io/home-assistant/home-assistant
+    tag: "2026.11.0"
+    pullPolicy: IfNotPresent
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
+  podLabels: {}
+  service:
+    type: ClusterIP
+    port: 8123
+  route:
+    main:
+      enabled: true
+      gatewayName: "internal-gateway"
+      gatewayNamespace: "common-services"
+      hostname: "ha.internal.example.com"
+    public:
+      enabled: false
+      gatewayName: "public-gateway"
+      gatewayNamespace: "common-services"
+      hostname: "ha.external.example.com"
+  persistence:
+    enabled: true
+    size: 10Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+  dbus:
+    enabled: true
+    hostPath: /run/dbus
+  usbDevice:
+    enabled: false
+    hostPath: ""
+    mountPath: ""
+  config:
+    name: "Maison"
+    country: "FR"
+    unitSystem: "metric"
+    currency: "EUR"
+    internalUrl: "https://ha.internal.example.com"
+    externalUrl: ""
+    logLevel: "info"
+    trustedProxies:
+      - "10.42.0.0/16"
+      - "10.43.0.0/16"
+      - "192.168.1.0/24"
+      - "127.0.0.1"
+      - "::1"
+    prometheusMetrics: true
+    recorderPurgeKeepDays: 7
+    recorderCommitInterval: 15
+  packages: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  extraEnv: []
+
+otbr:
+  enabled: false
+  replicas: 1
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  image:
+    repository: openthread/border-router
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
+  podLabels: {}
+  backboneInterface: "eno1"
+  threadInterface: "wpan0"
+  rcpDevice:
+    hostPath: "/dev/serial/by-id/usb-SONOFF_SONOFF_Dongle_Lite_MG21_5022a22d52a2ef118c1a926661ce3355-if00-port0"
+    mountPath: "/dev/ttyThread"
+    baudrate: 460800
+    flowControl: false
+  nat64:
+    enabled: true
+    prefix: "64:ff9b::/96"
+  service:
+    type: ClusterIP
+    restPort: 8081
+    webPort: 8080
+  route:
+    enabled: false
+    gatewayName: "internal-gateway"
+    gatewayNamespace: "common-services"
+    hostname: "otbr.internal.example.com"
+  persistence:
+    enabled: true
+    size: 500Mi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  extraEnv: []
+
+matterServer:
+  enabled: true
+  replicas: 1
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  image:
+    repository: ghcr.io/matter-js/python-matter-server
+    tag: "8.1.0"
+    pullPolicy: IfNotPresent
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
+  podLabels: {}
+  primaryInterface: ""
+  logLevel: "info"
+  args: []
+  dbus:
+    enabled: true
+    hostPath: /run/dbus
+  service:
+    type: ClusterIP
+    port: 5580
+  route:
+    enabled: false
+    gatewayName: "internal-gateway"
+    gatewayNamespace: "common-services"
+    hostname: "matter.internal.example.com"
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  extraEnv: []
+
+mosquitto:
+  enabled: false
+  replicas: 1
+  image:
+    repository: eclipse-mosquitto
+    tag: "2.0.21"
+    pullPolicy: IfNotPresent
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
+  podLabels: {}
+  service:
+    type: ClusterIP
+    port: 1883
+    websocketPort: 9001
+  config: |
+    persistence true
+    persistence_location /mosquitto/data/
+    log_dest stdout
+    listener 1883 0.0.0.0
+    allow_anonymous true
+    listener 9001 0.0.0.0
+    protocol websockets
+    allow_anonymous true
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+zigbee2mqtt:
+  enabled: false
+  replicas: 1
+  hostNetwork: false
+  image:
+    repository: koenkk/zigbee2mqtt
+    tag: "2.1.1"
+    pullPolicy: IfNotPresent
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
+  podLabels: {}
+  service:
+    type: ClusterIP
+    port: 8080
+  route:
+    enabled: true
+    gatewayName: "internal-gateway"
+    gatewayNamespace: "common-services"
+    hostname: "z2m.internal.example.com"
+  usbDevice:
+    enabled: false
+    hostPath: "/dev/serial/by-id/usb-Sonoff_Zigbee_Dongle"
+    mountPath: "/dev/ttyACM0"
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  extraEnv:
+    - name: ZIGBEE2MQTT_CONFIG_MQTT_SERVER
+      value: "mqtt://home-automation-mosquitto:1883"
+    - name: ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED
+      value: "true"
+    - name: ZIGBEE2MQTT_CONFIG_FRONTEND_PORT
+      value: "8080"
+    - name: ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED
+      value: "true"

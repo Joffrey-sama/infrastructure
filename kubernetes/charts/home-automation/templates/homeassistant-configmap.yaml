@@ -1,0 +1,63 @@
+{{- if .Values.homeassistant.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "home-automation.fullname" . }}-ha-config
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: homeassistant
+data:
+  configuration.yaml: |
+    # Loads default set of integrations. Do not remove.
+    default_config:
+
+    homeassistant:
+      name: {{ .Values.homeassistant.config.name | default "Maison" | quote }}
+      country: {{ .Values.homeassistant.config.country | default "FR" | quote }}
+      time_zone: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
+      unit_system: {{ .Values.homeassistant.config.unitSystem | default "metric" | quote }}
+      currency: {{ .Values.homeassistant.config.currency | default "EUR" | quote }}
+      {{- if .Values.homeassistant.config.internalUrl }}
+      internal_url: {{ .Values.homeassistant.config.internalUrl | quote }}
+      {{- end }}
+      {{- if .Values.homeassistant.config.externalUrl }}
+      external_url: {{ .Values.homeassistant.config.externalUrl | quote }}
+      {{- end }}
+      media_dirs:
+        local: /config/media
+      packages: !include_dir_named packages
+      customize: !include customize.yaml
+
+    # Load frontend themes from the themes folder
+    frontend:
+      themes: !include_dir_merge_named themes
+
+    http:
+      use_x_forwarded_for: true
+      trusted_proxies:
+        {{- range .Values.homeassistant.config.trustedProxies }}
+        - {{ . | quote }}
+        {{- end }}
+
+    {{- if .Values.homeassistant.config.prometheusMetrics }}
+    prometheus:
+      requires_auth: false
+    {{- end }}
+
+    logger:
+      default: {{ .Values.homeassistant.config.logLevel | default "info" }}
+
+    recorder:
+      auto_purge: true
+      auto_repack: true
+      purge_keep_days: {{ .Values.homeassistant.config.recorderPurgeKeepDays | default 7 }}
+      commit_interval: {{ .Values.homeassistant.config.recorderCommitInterval | default 15 }}
+
+    automation: !include automations.yaml
+    script: !include scripts.yaml
+    scene: !include scenes.yaml
+  {{- range $key, $val := .Values.homeassistant.packages }}
+  {{ $key }}: |
+    {{- $val | nindent 4 }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,12 @@
+{{- if .Values.mosquitto.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "home-automation.fullname" . }}-mosquitto-config
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mosquitto
+data:
+  mosquitto.conf: |
+    {{- .Values.mosquitto.config | nindent 4 }}
+{{- end }}

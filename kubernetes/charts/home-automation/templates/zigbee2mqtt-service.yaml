@@ -1,0 +1,19 @@
+{{- if .Values.zigbee2mqtt.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "home-automation.fullname" . }}-zigbee2mqtt
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zigbee2mqtt
+spec:
+  type: {{ .Values.zigbee2mqtt.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.zigbee2mqtt.service.port | default 8080 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "home-automation.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: zigbee2mqtt
+{{- end }}

@@ -1,0 +1,23 @@
+{{- if .Values.otbr.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "home-automation.fullname" . }}-otbr
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otbr
+spec:
+  type: {{ .Values.otbr.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.otbr.service.restPort | default 8081 }}
+      targetPort: rest
+      protocol: TCP
+      name: rest
+    - port: {{ .Values.otbr.service.webPort | default 8080 }}
+      targetPort: web
+      protocol: TCP
+      name: web
+  selector:
+    {{- include "home-automation.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: otbr
+{{- end }}
