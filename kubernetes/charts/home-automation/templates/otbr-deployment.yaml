@@ -40,21 +40,19 @@ spec:
           env:
             - name: TZ
               value: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
-            - name: OTBR_BACKBONE_IF
+            - name: BACKBONE_IF
               value: {{ .Values.otbr.backboneInterface | default "eno1" | quote }}
-            - name: OTBR_DEVICE
+            - name: DEVICE
               value: {{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" | quote }}
-            - name: OTBR_BAUDRATE
+            - name: BAUDRATE
               value: {{ .Values.otbr.rcpDevice.baudrate | default 115200 | quote }}
-            - name: OTBR_FLOW_CONTROL
+            - name: FLOW_CONTROL
               value: {{ ternary "1" "0" (.Values.otbr.rcpDevice.flowControl | default false) | quote }}
-            - name: OTBR_WEB
-              value: "1"
             - name: OTBR_WEB_PORT
               value: {{ .Values.otbr.service.webPort | default 8080 | quote }}
             - name: OTBR_REST_PORT
               value: {{ .Values.otbr.service.restPort | default 8081 | quote }}
-            - name: OTBR_NAT64
+            - name: NAT64
               value: {{ ternary "1" "0" (.Values.otbr.nat64.enabled | default true) | quote }}
             {{- range .Values.otbr.extraEnv }}
             - name: {{ .name }}
