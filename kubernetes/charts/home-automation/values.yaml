@@ -84,7 +84,7 @@ otbr:
   rcpDevice:
     hostPath: "/dev/serial/by-id/usb-SONOFF_SONOFF_Dongle_Lite_MG21_5022a22d52a2ef118c1a926661ce3355-if00-port0"
     mountPath: "/dev/ttyThread"
-    baudrate: 460800
+    baudrate: 115200
     flowControl: false
   nat64:
     enabled: true
@@ -118,7 +118,7 @@ matterServer:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
   image:
-    repository: ghcr.io/home-assistant-libs/python-matter-server
+    repository: ghcr.io/matter-js/python-matter-server
     tag: "8.1.2"
     pullPolicy: IfNotPresent
   podAnnotations:

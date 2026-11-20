@@ -45,7 +45,7 @@ spec:
             - name: OT_THREAD_IF
               value: {{ .Values.otbr.threadInterface | default "wpan0" | quote }}
             - name: OT_RCP_DEVICE
-              value: "spinel+hdlc+uart://{{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" }}?uart-baudrate={{ .Values.otbr.rcpDevice.baudrate | default 460800 }}{{- if .Values.otbr.rcpDevice.flowControl }}&uart-flow-control{{- end }}"
+              value: "spinel+hdlc+uart://{{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" }}?uart-baudrate={{ .Values.otbr.rcpDevice.baudrate | default 115200 }}{{- if .Values.otbr.rcpDevice.flowControl }}&uart-flow-control{{- end }}"
             - name: OT_REST_LISTEN_ADDR
               value: "0.0.0.0"
             - name: OT_REST_LISTEN_PORT
