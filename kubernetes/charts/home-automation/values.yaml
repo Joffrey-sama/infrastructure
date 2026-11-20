@@ -119,7 +119,7 @@ matterServer:
   dnsPolicy: ClusterFirstWithHostNet
   image:
     repository: ghcr.io/matter-js/python-matter-server
-    tag: "8.1.0"
+    tag: "8.1.2"
     pullPolicy: IfNotPresent
   podAnnotations:
     sidecar.istio.io/inject: "false"
