@@ -73,8 +73,8 @@ otbr:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
   image:
-    repository: openthread/border-router
-    tag: "latest"
+    repository: ghcr.io/ownbee/hass-otbr-docker
+    tag: "v0.4.0"
     pullPolicy: IfNotPresent
   podAnnotations:
     sidecar.istio.io/inject: "false"
