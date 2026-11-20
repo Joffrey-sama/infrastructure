@@ -20,7 +20,7 @@ main:
         main:
           image:
             repository: ghcr.io/flaresolverr/flaresolverr
-            tag: v3.3.21
+            tag: v3.5.2
 
     prowlarr:
       enabled: true
@@ -30,7 +30,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/prowlarr
-            tag: release-1.31.2.4975
+            tag: release-3.0.2.5780
           probes:
             liveness:
               enabled: true
@@ -82,7 +82,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/radarr
-            tag: release-5.19.3.9730
+            tag: release-7.0.3.10918
           probes:
             liveness:
               enabled: true
@@ -130,7 +130,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/sonarr
-            tag: release-4.0.13.2932
+            tag: release-4.0.20.3014
           probes:
             liveness:
               enabled: true
@@ -178,7 +178,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/bazarr
-            tag: release-1.5.1
+            tag: release-v1.6.2
           probes:
             liveness:
               enabled: true
@@ -227,7 +227,7 @@ main:
           enabled: false
           image:
             repository: qmcgaw/gluetun
-            tag: v3.41.1
+            tag: v3.41.3
 
           securityContext:
             capabilities:
