@@ -2,13 +2,13 @@ apiVersion: v2
 name: media-automation
 description: A Helm chart for media automation tools (qBittorrent, Sabnzbd, Homarr, and the Servarr suite)
 type: application
-version: 0.10.0
+version: 0.10.1
 appVersion: "1.16.0"
 
 dependencies:
   - name: servarr
     version: "1.0.0"
-    repository: "file://../servarr"
+    repository: "oci://ghcr.io/joffrey-sama/charts"
     condition: servarr.enabled
   - name: app-template
     version: "5.0.1"
