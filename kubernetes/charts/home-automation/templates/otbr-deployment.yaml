@@ -40,16 +40,20 @@ spec:
           env:
             - name: TZ
               value: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
-            - name: INFRA_IF_NAME
-              value: {{ .Values.otbr.backboneInterface | default "eth0" | quote }}
-            - name: THREAD_IF_NAME
+            - name: OT_INFRA_IF
+              value: {{ .Values.otbr.backboneInterface | default "eno1" | quote }}
+            - name: OT_THREAD_IF
               value: {{ .Values.otbr.threadInterface | default "wpan0" | quote }}
-            - name: RADIO_URL
+            - name: OT_RCP_DEVICE
               value: "spinel+hdlc+uart://{{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" }}?uart-baudrate={{ .Values.otbr.rcpDevice.baudrate | default 460800 }}{{- if .Values.otbr.rcpDevice.flowControl }}&uart-flow-control{{- end }}"
-            - name: NAT64
-              value: {{ ternary "1" "0" .Values.otbr.nat64.enabled | quote }}
-            - name: NAT64_PREFIX
-              value: {{ .Values.otbr.nat64.prefix | default "64:ff9b::/96" | quote }}
+            - name: OT_REST_LISTEN_ADDR
+              value: "0.0.0.0"
+            - name: OT_REST_LISTEN_PORT
+              value: {{ .Values.otbr.service.restPort | default 8081 | quote }}
+            - name: OT_WEB_LISTEN_ADDR
+              value: "0.0.0.0"
+            - name: OT_WEB_LISTEN_PORT
+              value: {{ .Values.otbr.service.webPort | default 8080 | quote }}
             {{- range .Values.otbr.extraEnv }}
             - name: {{ .name }}
               value: {{ .value | quote }}
@@ -66,7 +70,7 @@ spec:
           volumeMounts:
             {{- if .Values.otbr.persistence.enabled }}
             - name: data
-              mountPath: /var/lib/thread
+              mountPath: /data
             {{- end }}
             - name: rcp-device
               mountPath: {{ .Values.otbr.rcpDevice.mountPath | default "/dev/ttyThread" }}

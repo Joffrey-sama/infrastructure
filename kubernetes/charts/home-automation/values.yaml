@@ -118,8 +118,8 @@ matterServer:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
   image:
-    repository: ghcr.io/matter-js/python-matter-server
-    tag: "8.1.0"
+    repository: ghcr.io/home-assistant-libs/python-matter-server
+    tag: "8.1.2"
     pullPolicy: IfNotPresent
   podAnnotations:
     sidecar.istio.io/inject: "false"
