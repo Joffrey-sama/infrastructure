@@ -23,6 +23,8 @@ data:
       {{- if .Values.homeassistant.config.externalUrl }}
       external_url: {{ .Values.homeassistant.config.externalUrl | quote }}
       {{- end }}
+      allowlist_external_dirs:
+        - /config/media
       media_dirs:
         local: /config/media
       packages: !include_dir_named packages
