@@ -27,7 +27,7 @@ main:
         main:
           image:
             repository: ghcr.io/hotio/qbittorrent
-            tag: release-4.6.5
+            tag: release-4.6.7
           resources:
             requests: { cpu: "200m", memory: "512Mi" }
             limits: { cpu: "2", memory: "2Gi" }
