@@ -10,7 +10,7 @@
   - Ansible collection `joffrey_sama.infrastructure` (`ansible/roles/*`, `ansible/playbooks/*`)
   - Terraform modules (`terraform/modules/*`)
   - Reusable GitHub Actions workflows (`.github/workflows/*`)
-- **Zero environment specifics**: NEVER hardcode private IPs (`192.168.1.x`), private domains (`*.delva-home.fr`), cluster-specific annotations (e.g., `sidecar.istio.io/inject`), or secrets. Expose configurable variables with empty/neutral defaults (`podAnnotations: {}`, `subnets: []`).
+- **Zero environment specifics**: NEVER hardcode private IPs (`10.x.x.x`), private domains (`*.example.com`), cluster-specific annotations (e.g., `sidecar.istio.io/inject`), or secrets. Expose configurable variables with empty/neutral defaults (`podAnnotations: {}`, `subnets: []`).
 - **Strict SemVer & Zero Floating Tags**: NEVER use `@main`, `@master`, `:latest`, or major-only `@vX` when exact SemVer tags exist. Pin all GitHub Actions, container images, Terraform modules, and Helm dependencies to exact versions (`vX.Y.Z`) for Renovate tracking.
 
 ## Project Management (GitHub Projects & Issues)
