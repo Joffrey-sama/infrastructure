@@ -22,7 +22,7 @@ on:
         description: "Python version for flux-local"
         required: false
         type: string
-        default: "3.12"
+        default: "3.13"
   workflow_call:
     inputs:
       cluster_path:
@@ -43,7 +43,7 @@ on:
         description: "Python version for flux-local"
         required: false
         type: string
-        default: "3.12"
+        default: "3.13"
 
 permissions:
   contents: read
