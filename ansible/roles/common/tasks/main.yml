@@ -81,6 +81,22 @@
     proto: udp
     comment: 'Allow mDNS (Home Assistant / Matter / Thread)'
 
+- name: Allow routed IPv6/IPv4 traffic from LAN interface to Thread wpan0 interface
+  community.general.ufw:
+    rule: allow
+    route: true
+    interface_in: "{{ ansible_default_ipv4.interface | default('eno1') }}"
+    interface_out: wpan0
+    comment: 'Allow LAN to Thread OTBR routing'
+
+- name: Allow routed IPv6/IPv4 traffic from Thread wpan0 interface to LAN interface
+  community.general.ufw:
+    rule: allow
+    route: true
+    interface_in: wpan0
+    interface_out: "{{ ansible_default_ipv4.interface | default('eno1') }}"
+    comment: 'Allow Thread OTBR to LAN routing'
+
 
 - name: Disable swap immediately
   ansible.builtin.command: swapoff -a

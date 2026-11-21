@@ -33,4 +33,7 @@
         - { key: "net.ipv6.conf.default.forwarding", value: "1" } # Required for OpenThread Border Router (OTBR)
         - { key: "net.ipv6.conf.all.accept_ra", value: "2" } # Accept Router Advertisements even when forwarding is enabled
         - { key: "net.ipv6.conf.default.accept_ra", value: "2" } # Accept Router Advertisements even when forwarding is enabled
+        - { key: "net.ipv6.conf.{{ ansible_default_ipv4.interface | default('eno1') }}.accept_ra", value: "2" } # Accept Router Advertisements on primary LAN interface when forwarding is enabled
         - { key: "net.ipv6.conf.all.accept_ra_rt_info_max_plen", value: "64" } # Accept Thread RIO /64 routes from OTBR
+        - { key: "net.ipv6.conf.default.accept_ra_rt_info_max_plen", value: "64" } # Accept Thread RIO /64 routes from OTBR by default
+        - { key: "net.ipv6.conf.{{ ansible_default_ipv4.interface | default('eno1') }}.accept_ra_rt_info_max_plen", value: "64" } # Accept Thread RIO /64 routes on primary LAN interface
