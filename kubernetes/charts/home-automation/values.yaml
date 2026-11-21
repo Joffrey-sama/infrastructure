@@ -9,7 +9,7 @@ homeassistant:
   dnsPolicy: ClusterFirstWithHostNet
   image:
     repository: ghcr.io/home-assistant/home-assistant
-    tag: "2026.11.0"
+    tag: "2026.11.2"
     pullPolicy: IfNotPresent
   podAnnotations:
     sidecar.istio.io/inject: "false"
