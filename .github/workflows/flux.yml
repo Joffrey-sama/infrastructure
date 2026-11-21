@@ -53,6 +53,10 @@ jobs:
   flux-diff:
     name: "Flux Diff & Validate"
     runs-on: ubuntu-latest
+    env:
+      FLUX_LOCAL_VERSION: "8.4.0"
+      CLUSTER_PATH: ${{ inputs.cluster_path }}
+      TARGET_BRANCH: ${{ inputs.target_branch || 'main' }}
     steps:
       - name: "Checkout Code"
         uses: actions/checkout@v7
@@ -67,50 +71,128 @@ jobs:
       - name: "Setup Flux CLI"
         uses: fluxcd/flux2/action@v2.9.6
 
+      # Required by flux-local to render HelmRelease charts (helm pull/template).
+      - name: "Setup Helm"
+        uses: azure/setup-helm@v5
+        with:
+          version: "v4.3.1"
+
       - name: "Install flux-local"
         run: |
-          pip install flux-local
+          pip install "flux-local==${FLUX_LOCAL_VERSION}"
 
-      - name: "Run Flux Diff & Build"
+      - name: "Run Flux Validate & Diff"
         id: diff
+        env:
+          # Volatile attributes stripped from rendered manifests to reduce diff noise.
+          STRIP_ATTRS: "helm.sh/chart,checksum/config,app.kubernetes.io/version,chart"
         run: |
-          TARGET_BRANCH="${{ inputs.target_branch || 'main' }}"
+          set -uo pipefail
+          FAILED=false
+          TEST_STATUS="✅ Passed"
 
-          # Run build test first
-          if ! flux-local test --path "${{ inputs.cluster_path }}"; then
-            echo "::warning::flux-local build validation reported issues for ${{ inputs.cluster_path }}"
+          # 1. Build validation, including Helm chart rendering.
+          echo "::group::flux-local test (helm enabled)"
+          if ! flux-local test --enable-helm --path "${CLUSTER_PATH}"; then
+            echo "::error::flux-local validation failed for ${CLUSTER_PATH}"
+            TEST_STATUS="❌ Failed (see workflow logs)"
+            FAILED=true
           fi
+          echo "::endgroup::"
 
-          DIFF_OUTPUT=$(flux-local diff kustomization \
-            --path "${{ inputs.cluster_path }}" \
-            --branch-orig "origin/${TARGET_BRANCH}" 2>&1 || true)
+          # 2. Kustomization-level diff (Flux objects: HelmRelease specs, ConfigMaps, ...).
+          #    stderr is kept in the logs and never mixed into the diff output.
+          echo "::group::flux-local diff kustomization"
+          if ! flux-local diff kustomization \
+              --all-namespaces \
+              --path "${CLUSTER_PATH}" \
+              --branch-orig "origin/${TARGET_BRANCH}" > diff_ks.txt; then
+            echo "::error::flux-local diff kustomization failed for ${CLUSTER_PATH}"
+            FAILED=true
+          fi
+          echo "::endgroup::"
+
+          # 3. HelmRelease diff: renders charts on both branches and diffs the resulting manifests.
+          echo "::group::flux-local diff helmrelease"
+          if ! flux-local diff helmrelease \
+              --all-namespaces \
+              --path "${CLUSTER_PATH}" \
+              --branch-orig "origin/${TARGET_BRANCH}" \
+              --strip-attrs "${STRIP_ATTRS}" \
+              --limit-bytes 20000 > diff_hr.txt; then
+            echo "::error::flux-local diff helmrelease failed for ${CLUSTER_PATH}"
+            FAILED=true
+          fi
+          echo "::endgroup::"
+
+          render_section() {
+            local title="$1" file="$2"
+            echo "#### ${title}"
+            echo ""
+            if [ -s "${file}" ]; then
+              echo "<details open><summary>Show diff</summary>"
+              echo ""
+              echo '```diff'
+              cat "${file}"
+              echo '```'
+              echo ""
+              echo "</details>"
+            else
+              echo "✅ No changes detected."
+            fi
+            echo ""
+          }
 
           {
             echo "### 🔍 Flux Pre-flight Diff (against ${TARGET_BRANCH})"
             echo ""
-            if [ -n "$DIFF_OUTPUT" ]; then
-              echo "\`\`\`diff"
-              echo "$DIFF_OUTPUT"
-              echo "\`\`\`"
-            else
-              echo "✅ No changes detected."
-            fi
+            echo "**Cluster path:** \`${CLUSTER_PATH}\` — **Validation (helm enabled):** ${TEST_STATUS}"
+            echo ""
+            render_section "Flux resources (Kustomizations)" diff_ks.txt
+            render_section "Rendered manifests (HelmReleases)" diff_hr.txt
           } > diff_output.md
 
+          cat diff_output.md >> "${GITHUB_STEP_SUMMARY}"
+          echo "failed=${FAILED}" >> "${GITHUB_OUTPUT}"
+
       - name: "Comment Diff on PR"
-        if: inputs.comment_on_pr && github.event_name == 'pull_request'
+        if: ${{ !cancelled() && inputs.comment_on_pr && github.event_name == 'pull_request' }}
         uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
-            if (fs.existsSync('diff_output.md')) {
-              const diffContent = fs.readFileSync('diff_output.md', 'utf8');
-              if (diffContent.trim().length > 0) {
-                github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: diffContent
-                });
-              }
+            if (!fs.existsSync('diff_output.md')) {
+              core.warning('diff_output.md not found, skipping PR comment');
+              return;
             }
+
+            // Sticky comment: one comment per cluster path, updated on each push.
+            const marker = `<!-- flux-diff:${process.env.CLUSTER_PATH} -->`;
+            const MAX_LENGTH = 64000; // GitHub comment hard limit is 65536 chars.
+            let body = fs.readFileSync('diff_output.md', 'utf8');
+            if (body.length > MAX_LENGTH) {
+              body = body.slice(0, MAX_LENGTH) +
+                '\n```\n\n</details>\n\n⚠️ Diff truncated, see the workflow job summary for the full output.\n';
+            }
+            body = `${marker}\n${body}`;
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100,
+            });
+            const existing = comments.find(
+              (c) => c.user?.type === 'Bot' && c.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: "Fail on validation or diff errors"
+        if: steps.diff.outputs.failed == 'true'
+        run: |
+          echo "::error::Flux validation or manifest rendering failed for ${CLUSTER_PATH}"
+          exit 1
