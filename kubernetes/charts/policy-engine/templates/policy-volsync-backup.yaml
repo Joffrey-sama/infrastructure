@@ -1,88 +1,114 @@
 {{- if .Values.volsyncPolicy.enabled }}
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+{{- $excludeKey := .Values.volsyncPolicy.excludeAnnotation | default "backup.delva-home.fr/exclude" -}}
+{{- $basePath := .Values.volsyncPolicy.baseDestinationPath | default "backups/onprem" -}}
+apiVersion: policies.kyverno.io/v1
+kind: GeneratingPolicy
 metadata:
-  name: auto-volsync-pvc-backup
+  name: auto-volsync-pvc-backup-media
   labels:
     app.kubernetes.io/name: auto-volsync-pvc-backup
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
   annotations:
-    policies.kyverno.io/title: Auto VolSync PVC Backup
+    policies.kyverno.io/title: Auto VolSync PVC Backup (Media Server)
+    policies.kyverno.io/category: Storage / Backup
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Automatically generates a VolSync ReplicationSource (UID/GID 1000) for any
+      PersistentVolumeClaim in media-server, unless excluded via annotation.
+spec:
+  evaluation:
+    generateExisting:
+      enabled: true
+    skipBackgroundRequests: false
+    synchronize:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["persistentvolumeclaims"]
+  matchConditions:
+    - name: is-media-server-namespace
+      expression: 'object.metadata.namespace == "media-server"'
+    - name: exclude-annotation
+      expression: '!(has(object.metadata.annotations) && {{ $excludeKey | quote }} in object.metadata.annotations && object.metadata.annotations[{{ $excludeKey | quote }}] == "true")'
+  generate:
+    - template:
+        interpolate: cel
+        value: |
+          apiVersion: volsync.backube/v1alpha1
+          kind: ReplicationSource
+          metadata:
+            name: (( object.metadata.name + "-backup" ))
+            namespace: (( object.metadata.namespace ))
+          spec:
+            sourcePVC: (( object.metadata.name ))
+            trigger:
+              schedule: {{ .Values.volsyncPolicy.schedule | default "0 3 * * *" | quote }}
+            rclone:
+              rcloneConfig: {{ .Values.volsyncPolicy.rcloneSecret | default "rclone-backup-secret" | quote }}
+              rcloneConfigSection: {{ .Values.volsyncPolicy.rcloneSection | default "gdrive-secure" | quote }}
+              rcloneDestPath: (( {{ $basePath | quote }} + "/" + object.metadata.namespace + "/" + object.metadata.name ))
+              copyMethod: Direct
+              moverSecurityContext:
+                runAsUser: 1000
+                runAsGroup: 1000
+                fsGroup: 1000
+---
+apiVersion: policies.kyverno.io/v1
+kind: GeneratingPolicy
+metadata:
+  name: auto-volsync-pvc-backup-default
+  labels:
+    app.kubernetes.io/name: auto-volsync-pvc-backup
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    policies.kyverno.io/title: Auto VolSync PVC Backup (Default)
     policies.kyverno.io/category: Storage / Backup
     policies.kyverno.io/severity: medium
     policies.kyverno.io/description: >-
       Automatically generates a VolSync ReplicationSource for any PersistentVolumeClaim
       across all non-system namespaces, unless excluded via annotation.
 spec:
-  rules:
-  - name: generate-replicationsource-media
-    match:
-      any:
-      - resources:
-          kinds:
-            - PersistentVolumeClaim
-          namespaces:
-            - media-server
-    exclude:
-      any:
-      - resources:
-          annotations:
-            {{ .Values.volsyncPolicy.excludeAnnotation | default "backup.delva-home.fr/exclude" }}: "true"
-    generate:
-      generateExisting: true
-      synchronize: true
-      apiVersion: volsync.backube/v1alpha1
-      kind: ReplicationSource
-      name: "{{ "{{" }} request.object.metadata.name {{ "}}" }}-backup"
-      namespace: "{{ "{{" }} request.object.metadata.namespace {{ "}}" }}"
-      data:
-        spec:
-          sourcePVC: "{{ "{{" }} request.object.metadata.name {{ "}}" }}"
-          trigger:
-            schedule: {{ .Values.volsyncPolicy.schedule | default "0 3 * * *" | quote }}
-          rclone:
-            rcloneConfig: {{ .Values.volsyncPolicy.rcloneSecret | default "rclone-backup-secret" | quote }}
-            rcloneConfigSection: {{ .Values.volsyncPolicy.rcloneSection | default "gdrive-secure" | quote }}
-            rcloneDestPath: "{{ .Values.volsyncPolicy.baseDestinationPath | default "backups/onprem" }}/{{ "{{" }} request.object.metadata.namespace {{ "}}" }}/{{ "{{" }} request.object.metadata.name {{ "}}" }}"
-            copyMethod: Direct
-            moverSecurityContext:
-              runAsUser: 1000
-              runAsGroup: 1000
-              fsGroup: 1000
-  - name: generate-replicationsource-default
-    match:
-      any:
-      - resources:
-          kinds:
-            - PersistentVolumeClaim
-    exclude:
-      any:
-      - resources:
-          namespaces:
-            - media-server
-            {{- toYaml .Values.volsyncPolicy.excludeNamespaces | nindent 12 }}
-      - resources:
-          annotations:
-            {{ .Values.volsyncPolicy.excludeAnnotation | default "backup.delva-home.fr/exclude" }}: "true"
-    generate:
-      generateExisting: true
-      synchronize: true
-      apiVersion: volsync.backube/v1alpha1
-      kind: ReplicationSource
-      name: "{{ "{{" }} request.object.metadata.name {{ "}}" }}-backup"
-      namespace: "{{ "{{" }} request.object.metadata.namespace {{ "}}" }}"
-      data:
-        spec:
-          sourcePVC: "{{ "{{" }} request.object.metadata.name {{ "}}" }}"
-          trigger:
-            schedule: {{ .Values.volsyncPolicy.schedule | default "0 3 * * *" | quote }}
-          rclone:
-            rcloneConfig: {{ .Values.volsyncPolicy.rcloneSecret | default "rclone-backup-secret" | quote }}
-            rcloneConfigSection: {{ .Values.volsyncPolicy.rcloneSection | default "gdrive-secure" | quote }}
-            rcloneDestPath: "{{ .Values.volsyncPolicy.baseDestinationPath | default "backups/onprem" }}/{{ "{{" }} request.object.metadata.namespace {{ "}}" }}/{{ "{{" }} request.object.metadata.name {{ "}}" }}"
-            copyMethod: Direct
-            moverSecurityContext:
-              runAsUser: 0
-              runAsGroup: 0
+  evaluation:
+    generateExisting:
+      enabled: true
+    skipBackgroundRequests: false
+    synchronize:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["persistentvolumeclaims"]
+  matchConditions:
+    - name: exclude-namespaces
+      expression: '!(object.metadata.namespace in ["media-server"{{- range .Values.volsyncPolicy.excludeNamespaces }}, {{ . | quote }}{{- end }}])'
+    - name: exclude-annotation
+      expression: '!(has(object.metadata.annotations) && {{ $excludeKey | quote }} in object.metadata.annotations && object.metadata.annotations[{{ $excludeKey | quote }}] == "true")'
+  generate:
+    - template:
+        interpolate: cel
+        value: |
+          apiVersion: volsync.backube/v1alpha1
+          kind: ReplicationSource
+          metadata:
+            name: (( object.metadata.name + "-backup" ))
+            namespace: (( object.metadata.namespace ))
+          spec:
+            sourcePVC: (( object.metadata.name ))
+            trigger:
+              schedule: {{ .Values.volsyncPolicy.schedule | default "0 3 * * *" | quote }}
+            rclone:
+              rcloneConfig: {{ .Values.volsyncPolicy.rcloneSecret | default "rclone-backup-secret" | quote }}
+              rcloneConfigSection: {{ .Values.volsyncPolicy.rcloneSection | default "gdrive-secure" | quote }}
+              rcloneDestPath: (( {{ $basePath | quote }} + "/" + object.metadata.namespace + "/" + object.metadata.name ))
+              copyMethod: Direct
+              moverSecurityContext:
+                runAsUser: 0
+                runAsGroup: 0
 {{- end }}
