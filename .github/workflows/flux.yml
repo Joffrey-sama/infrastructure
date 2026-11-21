@@ -69,7 +69,7 @@ jobs:
           python-version: "${{ inputs.python_version }}"
 
       - name: "Setup Flux CLI"
-        uses: fluxcd/flux2/action@v2.9.6
+        uses: fluxcd/flux2/action@v2.10.1
 
       # Required by flux-local to render HelmRelease charts (helm pull/template).
       - name: "Setup Helm"
