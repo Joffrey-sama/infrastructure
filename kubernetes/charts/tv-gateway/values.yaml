@@ -115,7 +115,7 @@ scraper:
   replicas: 1
   image:
     repository: pipepito/acestream-scraper
-    tag: "v2.1.0-scraper-acestream-acexy"
+    tag: "v2.2.1-scraper-acestream-acexy"
     pullPolicy: IfNotPresent
   port: 8000
   httproute:
