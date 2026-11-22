@@ -55,6 +55,8 @@ main:
               value: DisabledForLocalAddresses
             - name: PROWLARR__AUTH__METHOD
               value: "Forms"
+            - name: PROWLARR__SERVER__ALLOWEDHOSTS
+              value: "*"
             # Database: Defaults to SQLite (local file in /config). 
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: PROWLARR__POSTGRES__HOST
@@ -107,6 +109,8 @@ main:
               value: "Forms"
             - name: RADARR__AUTH__REQUIRED
               value: DisabledForLocalAddresses
+            - name: RADARR__SERVER__ALLOWEDHOSTS
+              value: "*"
             # Database: Defaults to SQLite (local file in /config). 
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: RADARR__POSTGRES__HOST
@@ -155,6 +159,8 @@ main:
               value: "Forms"
             - name: SONARR__AUTH__REQUIRED
               value: DisabledForLocalAddresses
+            - name: SONARR__SERVER__ALLOWEDHOSTS
+              value: "*"
             # Database: Defaults to SQLite (local file in /config). 
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: SONARR__POSTGRES__HOST

@@ -12,6 +12,8 @@
   - Reusable GitHub Actions workflows (`.github/workflows/*`)
 - **Zero environment specifics**: NEVER hardcode private IPs (`10.x.x.x`), private domains (`*.example.com`), cluster-specific annotations (e.g., `sidecar.istio.io/inject`), or secrets. Expose configurable variables with empty/neutral defaults (`podAnnotations: {}`, `subnets: []`).
 - **Strict SemVer & Zero Floating Tags**: NEVER use `@main`, `@master`, `:latest`, or major-only `@vX` when exact SemVer tags exist. Pin all GitHub Actions, container images, Terraform modules, and Helm dependencies to exact versions (`vX.Y.Z`) for Renovate tracking.
+- **Helm Chart Version Bumps**: Whenever modifying any file inside `kubernetes/charts/<chart>/`, ALWAYS bump `version` in `Chart.yaml` (SemVer) before committing/pushing, because CI enforces unique `chart-<name>-v<version>` tags.
+- **Pull Request Template**: Always follow `.github/PULL_REQUEST_TEMPLATE.md` when creating PRs.
 
 ## Project Management (GitHub Projects & Issues)
 - The GitHub Projects Kanban board on `Joffrey-sama/delva-home-ops` and its Issues are the single source of truth for roadmap and tracking.
