@@ -85,7 +85,9 @@ spec:
         - name: rcp-device
           hostPath:
             path: {{ .Values.otbr.rcpDevice.hostPath }}
+            type: CharDevice
         - name: net-tun
           hostPath:
             path: /dev/net/tun
+            type: CharDevice
 {{- end }}
