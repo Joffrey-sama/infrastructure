@@ -157,7 +157,7 @@ mosquitto:
   replicas: 1
   image:
     repository: eclipse-mosquitto
-    tag: "2.0.21"
+    tag: "2.0.23"
     pullPolicy: IfNotPresent
   podAnnotations:
     sidecar.istio.io/inject: "false"
