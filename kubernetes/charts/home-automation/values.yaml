@@ -194,7 +194,7 @@ zigbee2mqtt:
   hostNetwork: false
   image:
     repository: koenkk/zigbee2mqtt
-    tag: "2.1.1"
+    tag: "2.14.3"
     pullPolicy: IfNotPresent
   podAnnotations:
     sidecar.istio.io/inject: "false"
