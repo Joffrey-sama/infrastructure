@@ -22,7 +22,7 @@ on:
         description: "Python version for flux-local"
         required: false
         type: string
-        default: "3.13"
+        default: "3.12"
   workflow_call:
     inputs:
       cluster_path:
@@ -43,7 +43,7 @@ on:
         description: "Python version for flux-local"
         required: false
         type: string
-        default: "3.13"
+        default: "3.12"
 
 permissions:
   contents: read
@@ -54,6 +54,7 @@ jobs:
     name: "Flux Diff & Validate"
     runs-on: ubuntu-latest
     env:
+      FLUX_LOCAL_VERSION: "7.11.0"
       CLUSTER_PATH: ${{ inputs.cluster_path }}
       TARGET_BRANCH: ${{ inputs.target_branch || 'main' }}
     steps:
@@ -61,6 +62,11 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v7
+        with:
+          python-version: "${{ inputs.python_version }}"
 
       - name: "Setup Flux CLI"
         uses: fluxcd/flux2/action@v2.9.6
@@ -70,44 +76,75 @@ jobs:
         with:
           version: "v4.3.1"
 
-      - name: "Setup Flate"
-        uses: home-operations/flate/action@v0.8.0
+      - name: "Install flux-local"
+        run: |
+          pip install "flux-local==${FLUX_LOCAL_VERSION}"
 
       - name: "Run Flux Validate & Diff"
         id: diff
+        env:
+          # Volatile attributes stripped from rendered manifests to reduce diff noise.
+          STRIP_ATTRS: "helm.sh/chart,checksum/config,app.kubernetes.io/version,chart"
         run: |
           set -uo pipefail
           FAILED=false
           TEST_STATUS="✅ Passed"
 
-          echo "::group::flate test"
-          if ! flate test --path .; then
-            echo "::error::flate validation failed for ${CLUSTER_PATH}"
+          echo "::group::flux-local test (helm enabled)"
+          if ! flux-local test --enable-helm --path "${CLUSTER_PATH}"; then
+            echo "::error::flux-local validation failed for ${CLUSTER_PATH}"
             TEST_STATUS="❌ Failed (see workflow logs)"
             FAILED=true
           fi
           echo "::endgroup::"
 
-          echo "::group::flate diff"
-          if ! flate diff \
-              --path . \
-              --base "origin/${TARGET_BRANCH}" \
-              -o github > diff_flate.txt; then
-            echo "::error::flate diff failed for ${CLUSTER_PATH}"
+          echo "::group::flux-local diff kustomization"
+          if ! flux-local diff kustomization \
+              --all-namespaces \
+              --path "${CLUSTER_PATH}" \
+              --branch-orig "origin/${TARGET_BRANCH}" > diff_ks.txt; then
+            echo "::error::flux-local diff kustomization failed for ${CLUSTER_PATH}"
             FAILED=true
           fi
           echo "::endgroup::"
 
-          {
-            echo "### 🔍 Flux Pre-flight Diff (against ${TARGET_BRANCH})"
+          echo "::group::flux-local diff helmrelease"
+          if ! flux-local diff helmrelease \
+              --all-namespaces \
+              --path "${CLUSTER_PATH}" \
+              --branch-orig "origin/${TARGET_BRANCH}" \
+              --strip-attrs "${STRIP_ATTRS}" \
+              --limit-bytes 20000 > diff_hr.txt; then
+            echo "::error::flux-local diff helmrelease failed for ${CLUSTER_PATH}"
+            FAILED=true
+          fi
+          echo "::endgroup::"
+
+          render_section() {
+            local title="$1" file="$2"
+            echo "#### ${title}"
             echo ""
-            echo "**Cluster path:** \`${CLUSTER_PATH}\` — **Validation:** ${TEST_STATUS}"
-            echo ""
-            if [ -s diff_flate.txt ]; then
-              cat diff_flate.txt
+            if [ -s "${file}" ]; then
+              echo "<details open><summary>Show diff</summary>"
+              echo ""
+              echo '```diff'
+              cat "${file}"
+              echo '```'
+              echo ""
+              echo "</details>"
             else
               echo "✅ No changes detected."
             fi
+            echo ""
+          }
+
+          {
+            echo "### 🔍 Flux Pre-flight Diff (against ${TARGET_BRANCH})"
+            echo ""
+            echo "**Cluster path:** \`${CLUSTER_PATH}\` — **Validation (helm enabled):** ${TEST_STATUS}"
+            echo ""
+            render_section "Flux resources (Kustomizations)" diff_ks.txt
+            render_section "Rendered manifests (HelmReleases)" diff_hr.txt
           } > diff_output.md
 
           cat diff_output.md >> "${GITHUB_STEP_SUMMARY}"
