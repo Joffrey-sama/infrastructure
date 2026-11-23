@@ -81,7 +81,7 @@ jobs:
           TEST_STATUS="✅ Passed"
 
           echo "::group::flate test"
-          if ! flate test --path "${CLUSTER_PATH}"; then
+          if ! flate test --path .; then
             echo "::error::flate validation failed for ${CLUSTER_PATH}"
             TEST_STATUS="❌ Failed (see workflow logs)"
             FAILED=true
@@ -90,7 +90,7 @@ jobs:
 
           echo "::group::flate diff"
           if ! flate diff \
-              --path "${CLUSTER_PATH}" \
+              --path . \
               --base "origin/${TARGET_BRANCH}" \
               -o github > diff_flate.txt; then
             echo "::error::flate diff failed for ${CLUSTER_PATH}"
