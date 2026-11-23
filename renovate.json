@@ -67,6 +67,11 @@
       ]
     },
     {
+      "matchManagers": ["helmv3"],
+      "matchDatasources": ["docker"],
+      "commitMessageTopic": "helm chart {{depName}}"
+    },
+    {
       "matchManagers": ["terraform", "terraform-version", "terragrunt", "terragrunt-version", "tflint-plugin"],
       "addLabels": ["renovate", "terraform"],
       "bumpVersions": [
