@@ -62,6 +62,8 @@ jobs:
 
       - name: "Setup Flate"
         uses: home-operations/flate/action@v0.8.0
+        with:
+          base: ""
 
       - name: "Run Flux Validate & Diff"
         id: diff
@@ -71,7 +73,7 @@ jobs:
           TEST_STATUS="✅ Passed"
 
           echo "::group::flate test"
-          if ! flate test --path . > flate_test.log 2>&1; then
+          if ! flate test --path "${CLUSTER_PATH}" > flate_test.log 2>&1; then
             cat flate_test.log
             echo "::error::flate validation failed for ${CLUSTER_PATH}"
             TEST_STATUS="❌ Failed (see workflow logs)"
@@ -88,7 +90,7 @@ jobs:
 
           echo "::group::flate diff"
           if ! flate diff \
-              --path . \
+              --path "${CLUSTER_PATH}" \
               --base "origin/${TARGET_BRANCH}" \
               -o github > diff_flate.txt 2> flate_diff.err; then
             cat flate_diff.err
