@@ -34,20 +34,34 @@ main:
           probes:
             liveness:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 9696
+              custom: true
+              spec:
+                httpGet:
+                  path: /ping
+                  port: 9696
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
             readiness:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 9696
+              custom: true
+              spec:
+                httpGet:
+                  path: /ping
+                  port: 9696
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
             startup:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 9696
+              custom: true
               spec:
+                httpGet:
+                  path: /ping
+                  port: 9696
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
                 failureThreshold: 30
                 periodSeconds: 5
           env:
@@ -85,20 +99,34 @@ main:
           probes:
             liveness:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 7878
+              custom: true
+              spec:
+                httpGet:
+                  path: /ping
+                  port: 7878
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
             readiness:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 7878
+              custom: true
+              spec:
+                httpGet:
+                  path: /ping
+                  port: 7878
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
             startup:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 7878
+              custom: true
               spec:
+                httpGet:
+                  path: /ping
+                  port: 7878
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
                 failureThreshold: 30
                 periodSeconds: 5
           env:
@@ -132,20 +160,34 @@ main:
           probes:
             liveness:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 8989
+              custom: true
+              spec:
+                httpGet:
+                  path: /ping
+                  port: 8989
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
             readiness:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 8989
+              custom: true
+              spec:
+                httpGet:
+                  path: /ping
+                  port: 8989
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
             startup:
               enabled: true
-              type: HTTP
-              path: /ping
-              port: 8989
+              custom: true
               spec:
+                httpGet:
+                  path: /ping
+                  port: 8989
+                  httpHeaders:
+                    - name: Host
+                      value: localhost
                 failureThreshold: 30
                 periodSeconds: 5
           env:
