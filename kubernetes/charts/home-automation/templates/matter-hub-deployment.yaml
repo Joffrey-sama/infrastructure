@@ -1,0 +1,94 @@
+{{- if .Values.matterHub.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "home-automation.fullname" . }}-matter-hub
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: matter-hub
+spec:
+  replicas: {{ .Values.matterHub.replicas | default 1 }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "home-automation.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: matter-hub
+  template:
+    metadata:
+      {{- if .Values.matterHub.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.matterHub.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "home-automation.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: matter-hub
+        {{- if .Values.matterHub.podLabels }}
+        {{- toYaml .Values.matterHub.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      hostNetwork: {{ .Values.matterHub.hostNetwork | default true }}
+      {{- if .Values.matterHub.hostNetwork }}
+      dnsPolicy: {{ .Values.matterHub.dnsPolicy | default "ClusterFirstWithHostNet" }}
+      {{- end }}
+      containers:
+        - name: matter-hub
+          image: "{{ .Values.matterHub.image.repository }}:{{ .Values.matterHub.image.tag }}"
+          imagePullPolicy: {{ .Values.matterHub.image.pullPolicy | default "IfNotPresent" }}
+          env:
+            - name: TZ
+              value: {{ .Values.global.timezone | default "Europe/Paris" | quote }}
+            - name: HAMH_HOME_ASSISTANT_URL
+              value: {{ .Values.matterHub.homeAssistantUrl | default "http://127.0.0.1:8123" | quote }}
+            {{- if .Values.matterHub.existingSecret }}
+            - name: HAMH_HOME_ASSISTANT_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.matterHub.existingSecret }}
+                  key: {{ .Values.matterHub.existingSecretKey | default "access-token" }}
+            {{- end }}
+            - name: HAMH_HTTP_PORT
+              value: {{ .Values.matterHub.service.port | default 8482 | quote }}
+            - name: HAMH_STORAGE_LOCATION
+              value: "/data"
+            - name: HAMH_LOG_LEVEL
+              value: {{ .Values.matterHub.logLevel | default "info" | quote }}
+            {{- if and .Values.matterHub.route.enabled .Values.matterHub.route.hostname }}
+            - name: HAMH_HTTP_ALLOWED_HOSTS
+              value: {{ .Values.matterHub.route.hostname | quote }}
+            {{- end }}
+            {{- range .Values.matterHub.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.matterHub.service.port | default 8482 }}
+              protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.matterHub.service.port | default 8482 }}
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.matterHub.service.port | default 8482 }}
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.matterHub.service.port | default 8482 }}
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.matterHub.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.matterHub.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+      volumes:
+        {{- if .Values.matterHub.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "home-automation.fullname" . }}-matter-hub-data
+        {{- end }}
+{{- end }}

@@ -1,0 +1,19 @@
+{{- if .Values.matterHub.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "home-automation.fullname" . }}-matter-hub
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: matter-hub
+spec:
+  type: {{ .Values.matterHub.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.matterHub.service.port | default 8482 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "home-automation.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: matter-hub
+{{- end }}

@@ -1,0 +1,23 @@
+{{- if and .Values.matterHub.enabled .Values.matterHub.route.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "home-automation.fullname" . }}-matter-hub
+  labels:
+    {{- include "home-automation.labels" . | nindent 4 }}
+    app.kubernetes.io/component: matter-hub
+spec:
+  parentRefs:
+    - name: {{ .Values.matterHub.route.gatewayName | default "internal-gateway" }}
+      namespace: {{ .Values.matterHub.route.gatewayNamespace | default "common-services" }}
+  hostnames:
+    - {{ .Values.matterHub.route.hostname | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "home-automation.fullname" . }}-matter-hub
+          port: {{ .Values.matterHub.service.port | default 8482 }}
+{{- end }}
