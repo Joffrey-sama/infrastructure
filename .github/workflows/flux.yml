@@ -98,6 +98,11 @@ jobs:
             FAILED=true
           else
             cat flate_diff.err
+            if [ -s diff_flate.txt ]; then
+              cat diff_flate.txt
+            else
+              echo "No changes detected."
+            fi
             if grep -qE "\[UnrelatedFailure\]|\[ExternalSource\]" flate_diff.err; then
               echo "::error::flate diff emitted UnrelatedFailure/ExternalSource warnings"
               FAILED=true
