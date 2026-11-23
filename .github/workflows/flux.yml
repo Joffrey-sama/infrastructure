@@ -18,11 +18,6 @@ on:
         required: false
         type: boolean
         default: false
-      python_version:
-        description: "Python version for flux-local"
-        required: false
-        type: string
-        default: "3.13"
   workflow_call:
     inputs:
       cluster_path:
@@ -39,11 +34,6 @@ on:
         required: false
         type: boolean
         default: true
-      python_version:
-        description: "Python version for flux-local"
-        required: false
-        type: string
-        default: "3.13"
 
 permissions:
   contents: read
@@ -58,17 +48,17 @@ jobs:
       TARGET_BRANCH: ${{ inputs.target_branch || 'main' }}
     steps:
       - name: "Checkout Code"
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: "Setup Flux CLI"
-        uses: fluxcd/flux2/action@v2.9.6
+        uses: fluxcd/flux2/action@v2.10.1
 
       - name: "Setup Helm"
-        uses: azure/setup-helm@v5
+        uses: azure/setup-helm@v5.1.0
         with:
-          version: "v4.3.1"
+          version: "v4.3.2"
 
       - name: "Setup Flate"
         uses: home-operations/flate/action@v0.8.0
@@ -81,10 +71,18 @@ jobs:
           TEST_STATUS="✅ Passed"
 
           echo "::group::flate test"
-          if ! flate test --path .; then
+          if ! flate test --path . > flate_test.log 2>&1; then
+            cat flate_test.log
             echo "::error::flate validation failed for ${CLUSTER_PATH}"
             TEST_STATUS="❌ Failed (see workflow logs)"
             FAILED=true
+          else
+            cat flate_test.log
+            if grep -qE "✓ 0 passed|\[UnrelatedFailure\]|\[ExternalSource\]" flate_test.log; then
+              echo "::error::flate test skipped resources or emitted UnrelatedFailure/ExternalSource warnings"
+              TEST_STATUS="❌ Failed (skipped/warnings)"
+              FAILED=true
+            fi
           fi
           echo "::endgroup::"
 
@@ -92,9 +90,16 @@ jobs:
           if ! flate diff \
               --path . \
               --base "origin/${TARGET_BRANCH}" \
-              -o github > diff_flate.txt; then
+              -o github > diff_flate.txt 2> flate_diff.err; then
+            cat flate_diff.err
             echo "::error::flate diff failed for ${CLUSTER_PATH}"
             FAILED=true
+          else
+            cat flate_diff.err
+            if grep -qE "\[UnrelatedFailure\]|\[ExternalSource\]" flate_diff.err; then
+              echo "::error::flate diff emitted UnrelatedFailure/ExternalSource warnings"
+              FAILED=true
+            fi
           fi
           echo "::endgroup::"
 
@@ -115,7 +120,7 @@ jobs:
 
       - name: "Comment Diff on PR"
         if: ${{ !cancelled() && inputs.comment_on_pr && github.event_name == 'pull_request' }}
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const fs = require('fs');
