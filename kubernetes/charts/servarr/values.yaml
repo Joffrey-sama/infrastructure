@@ -66,7 +66,7 @@ main:
             #   value: "prowlarr"
             # - name: PROWLARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: prowlarr-postgresql-secret, key: PASSWORD_PROWLARR } }
-            - name: PROWLARR__AUTH__APIKEY
+            PROWLARR__AUTH__APIKEY:
               valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
           resources:
             requests:
@@ -117,7 +117,7 @@ main:
             #   value: "radarr"
             # - name: RADARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: radarr-postgresql-secret, key: PASSWORD_RADARR } }
-            - name: RADARR__AUTH__APIKEY
+            RADARR__AUTH__APIKEY:
               valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
 
     sonarr:
@@ -164,7 +164,7 @@ main:
             #   value: "sonarr"
             # - name: SONARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: sonarr-postgresql-secret, key: PASSWORD_SONARR } }
-            - name: SONARR__AUTH__APIKEY
+            SONARR__AUTH__APIKEY:
               valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
 
     bazarr:
