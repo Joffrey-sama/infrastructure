@@ -116,7 +116,13 @@ jobs:
             echo "**Cluster path:** \`${CLUSTER_PATH}\` — **Validation:** ${TEST_STATUS}"
             echo ""
             if [ -s diff_flate.txt ]; then
+              echo "<details open><summary>Show diff</summary>"
+              echo ""
+              echo '```diff'
               cat diff_flate.txt
+              echo '```'
+              echo ""
+              echo "</details>"
             else
               echo "✅ No changes detected."
             fi
