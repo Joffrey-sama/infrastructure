@@ -51,12 +51,9 @@ main:
                 failureThreshold: 30
                 periodSeconds: 5
           env:
-            - name: PROWLARR__AUTH__REQUIRED
-              value: DisabledForLocalAddresses
-            - name: PROWLARR__AUTH__METHOD
-              value: "Forms"
-            - name: PROWLARR__SERVER__ALLOWEDHOSTS
-              value: "*"
+            PROWLARR__AUTH__REQUIRED: DisabledForLocalAddresses
+            PROWLARR__AUTH__METHOD: "Forms"
+            PROWLARR__SERVER__ALLOWEDHOSTS: "*"
             # Database: Defaults to SQLite (local file in /config). 
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: PROWLARR__POSTGRES__HOST
@@ -69,7 +66,7 @@ main:
             #   value: "prowlarr"
             # - name: PROWLARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: prowlarr-postgresql-secret, key: PASSWORD_PROWLARR } }
-            - name: PROWLARR__AUTH__APIKEY
+            PROWLARR__AUTH__APIKEY:
               valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
           resources:
             requests:
@@ -105,12 +102,9 @@ main:
                 failureThreshold: 30
                 periodSeconds: 5
           env:
-            - name: RADARR__AUTH__METHOD
-              value: "Forms"
-            - name: RADARR__AUTH__REQUIRED
-              value: DisabledForLocalAddresses
-            - name: RADARR__SERVER__ALLOWEDHOSTS
-              value: "*"
+            RADARR__AUTH__METHOD: "Forms"
+            RADARR__AUTH__REQUIRED: DisabledForLocalAddresses
+            RADARR__SERVER__ALLOWEDHOSTS: "*"
             # Database: Defaults to SQLite (local file in /config). 
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: RADARR__POSTGRES__HOST
@@ -123,7 +117,7 @@ main:
             #   value: "radarr"
             # - name: RADARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: radarr-postgresql-secret, key: PASSWORD_RADARR } }
-            - name: RADARR__AUTH__APIKEY
+            RADARR__AUTH__APIKEY:
               valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
 
     sonarr:
@@ -155,12 +149,9 @@ main:
                 failureThreshold: 30
                 periodSeconds: 5
           env:
-            - name: SONARR__AUTH__METHOD
-              value: "Forms"
-            - name: SONARR__AUTH__REQUIRED
-              value: DisabledForLocalAddresses
-            - name: SONARR__SERVER__ALLOWEDHOSTS
-              value: "*"
+            SONARR__AUTH__METHOD: "Forms"
+            SONARR__AUTH__REQUIRED: DisabledForLocalAddresses
+            SONARR__SERVER__ALLOWEDHOSTS: "*"
             # Database: Defaults to SQLite (local file in /config). 
             # To use PostgreSQL, uncomment and override these in your environment values:
             # - name: SONARR__POSTGRES__HOST
@@ -173,7 +164,7 @@ main:
             #   value: "sonarr"
             # - name: SONARR__POSTGRES__PASSWORD
             #   valueFrom: { secretKeyRef: { name: sonarr-postgresql-secret, key: PASSWORD_SONARR } }
-            - name: SONARR__AUTH__APIKEY
+            SONARR__AUTH__APIKEY:
               valueFrom: { secretKeyRef: { name: servarr-api-key, key: api-key } }
 
     bazarr:
