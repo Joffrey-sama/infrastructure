@@ -232,3 +232,40 @@ zigbee2mqtt:
       value: "8080"
     - name: ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED
       value: "true"
+
+matterHub:
+  enabled: false
+  replicas: 1
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  image:
+    repository: ghcr.io/riddix/home-assistant-matter-hub
+    tag: "v2.0.60"
+    pullPolicy: IfNotPresent
+  podAnnotations: {}
+  podLabels: {}
+  homeAssistantUrl: "http://127.0.0.1:8123"
+  existingSecret: ""
+  existingSecretKey: "access-token"
+  logLevel: "info"
+  service:
+    type: ClusterIP
+    port: 8482
+  route:
+    enabled: false
+    gatewayName: "internal-gateway"
+    gatewayNamespace: "common-services"
+    hostname: "matter-hub.internal.example.com"
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  extraEnv: []
