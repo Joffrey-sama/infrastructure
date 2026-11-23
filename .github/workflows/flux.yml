@@ -63,7 +63,7 @@ jobs:
           fetch-depth: 0
 
       - name: "Setup Flux CLI"
-        uses: fluxcd/flux2/action@v2.9.6
+        uses: fluxcd/flux2/action@v2.10.1
 
       - name: "Setup Helm"
         uses: azure/setup-helm@v5
