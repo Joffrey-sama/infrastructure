@@ -60,14 +60,6 @@ spec:
                   fi
                 fi
               done
-              {{- if .Values.homeassistant.hacs.enabled }}
-              if [ ! -f /config/custom_components/hacs/manifest.json ]; then
-                mkdir -p /config/custom_components/hacs
-                curl -fsSL "https://github.com/hacs/integration/releases/download/{{ .Values.homeassistant.hacs.version | default "2.0.5" }}/hacs.zip" -o /tmp/hacs.zip
-                python3 -m zipfile -e /tmp/hacs.zip /config/custom_components/hacs
-                rm -f /tmp/hacs.zip
-              fi
-              {{- end }}
           volumeMounts:
             - name: config
               mountPath: /config
