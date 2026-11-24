@@ -180,6 +180,7 @@ mosquitto:
     size: 1Gi
     accessMode: ReadWriteOnce
     storageClass: ""
+    annotations: {}
   resources:
     requests:
       cpu: 10m
