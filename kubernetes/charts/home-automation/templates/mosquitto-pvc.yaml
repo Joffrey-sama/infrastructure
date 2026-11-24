@@ -6,6 +6,10 @@ metadata:
   labels:
     {{- include "home-automation.labels" . | nindent 4 }}
     app.kubernetes.io/component: mosquitto
+  {{- with .Values.mosquitto.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   accessModes:
     - {{ .Values.mosquitto.persistence.accessMode | default "ReadWriteOnce" }}
