@@ -84,7 +84,7 @@ acestream:
     enabled: true
     image:
       repository: qmcgaw/gluetun
-      tag: "v3.41.1"
+      tag: "v3.41.3"
       pullPolicy: IfNotPresent
     vpnServiceProvider: "custom"
     vpnType: "wireguard"
@@ -129,7 +129,7 @@ scraper:
     enabled: false
     image:
       repository: qmcgaw/gluetun
-      tag: "v3.41.1"
+      tag: "v3.41.3"
       pullPolicy: IfNotPresent
     vpnServiceProvider: "custom"
     vpnType: "wireguard"
