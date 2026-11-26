@@ -16,7 +16,7 @@ resource "grafana_data_source" "greptimedb" {
 # Logs datasource for GreptimeDB (PostgreSQL)
 resource "grafana_data_source" "greptimedb_logs" {
   name          = "GreptimeDB Logs"
-  type          = "postgres"
+  type          = "grafana-postgresql-datasource"
   url           = var.greptimedb_pg_url
   database_name = "public"
   username      = "greptime"
