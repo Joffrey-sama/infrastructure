@@ -241,7 +241,7 @@ matterHub:
   dnsPolicy: ClusterFirstWithHostNet
   image:
     repository: ghcr.io/riddix/home-assistant-matter-hub
-    tag: "2.0.60"
+    tag: "2.1.0"
     pullPolicy: IfNotPresent
   podAnnotations: {}
   podLabels: {}
