@@ -14,7 +14,7 @@ metadata:
     policies.kyverno.io/category: Storage / Backup
     policies.kyverno.io/severity: medium
     policies.kyverno.io/description: >-
-      Automatically generates a VolSync ReplicationSource (UID/GID 1000) for any
+      Automatically generates a VolSync ReplicationSource (UID/GID 0) for any
       PersistentVolumeClaim in media-server, unless excluded via annotation.
 spec:
   evaluation:
@@ -53,9 +53,8 @@ spec:
               rcloneDestPath: (( {{ $basePath | quote }} + "/" + object.metadata.namespace + "/" + object.metadata.name ))
               copyMethod: Direct
               moverSecurityContext:
-                runAsUser: 1000
-                runAsGroup: 1000
-                fsGroup: 1000
+                runAsUser: 0
+                runAsGroup: 0
 ---
 apiVersion: policies.kyverno.io/v1
 kind: GeneratingPolicy
