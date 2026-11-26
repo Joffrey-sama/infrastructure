@@ -77,7 +77,7 @@ main:
           enabled: true
           image:
             repository: ghcr.io/henrywhitaker3/adguard-exporter
-            tag: v1.2.1
+            tag: v1.2.3
           env:
             ADGUARD_SERVERS: "http://127.0.0.1:80"
             ADGUARD_USERNAMES: "none"
